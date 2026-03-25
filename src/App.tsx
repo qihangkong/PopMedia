@@ -273,7 +273,7 @@ function FlowWithControls() {
               left: 16,
               bottom: 60,
               width: 200,
-              height: 150,
+              height: 112,
             }}
           />
         )}
