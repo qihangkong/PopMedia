@@ -271,7 +271,7 @@ function FlowWithControls() {
               borderRadius: 12,
               position: 'absolute',
               left: 16,
-              bottom: 70,
+              bottom: 60,
               width: 200,
               height: 150,
             }}

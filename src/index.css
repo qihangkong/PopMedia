@@ -350,6 +350,20 @@ body {
   backdrop-filter: blur(8px);
 }
 
+/* 禁用 React Flow 点击画布时的选择框效果 */
+.react-flow__pane {
+  cursor: default;
+}
+
+.react-flow__selection {
+  background: transparent !important;
+  border: none !important;
+}
+
+.react-flow__selection-scanner {
+  display: none !important;
+}
+
 .controls-btn {
   display: flex;
   align-items: center;
