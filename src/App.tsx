@@ -231,18 +231,6 @@ function FlowWithControls() {
     <>
       <Sidebar onAddNode={addNode} />
 
-      <ControlBar
-        zoom={zoom}
-        onZoomIn={zoomIn}
-        onZoomOut={zoomOut}
-        onFitView={() => fitView({ padding: 0.2 })}
-        onToggleMinimap={() => setShowMinimap(!showMinimap)}
-        onToggleSnapGrid={() => setSnapToGrid(!snapToGrid)}
-        onSetZoom={setZoomLevel}
-        showMinimap={showMinimap}
-        snapToGrid={snapToGrid}
-      />
-
       <ReactFlow
         nodes={nodes}
         edges={edges}
@@ -264,7 +252,7 @@ function FlowWithControls() {
         zoomOnDoubleClick={false}
         proOptions={{ hideAttribution: true }}
         defaultEdgeOptions={{ type: 'bezier' }}
-        style={{ background: '#1a1a1a' }}
+        style={{ background: '#1a1a1a', position: 'relative' }}
       >
         <Background
           variant={BackgroundVariant.Dots}
@@ -281,9 +269,25 @@ function FlowWithControls() {
             style={{
               background: 'rgba(30, 30, 30, 0.9)',
               borderRadius: 12,
+              position: 'absolute',
+              left: 16,
+              bottom: 70,
+              width: 200,
+              height: 150,
             }}
           />
         )}
+        <ControlBar
+          zoom={zoom}
+          onZoomIn={zoomIn}
+          onZoomOut={zoomOut}
+          onFitView={() => fitView({ padding: 0.2 })}
+          onToggleMinimap={() => setShowMinimap(!showMinimap)}
+          onToggleSnapGrid={() => setSnapToGrid(!snapToGrid)}
+          onSetZoom={setZoomLevel}
+          showMinimap={showMinimap}
+          snapToGrid={snapToGrid}
+        />
       </ReactFlow>
     </>
   )

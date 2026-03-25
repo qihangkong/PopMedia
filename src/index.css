@@ -334,12 +334,11 @@ body {
   transform: translateY(-5px) !important;
 }
 
-/* Canvas Controls */
+/* Canvas Controls - 固定在左侧 */
 .canvas-controls {
-  position: fixed;
+  position: absolute;
   bottom: 16px;
-  left: 50%;
-  transform: translateX(-50%);
+  left: 16px;
   z-index: 50;
   display: flex;
   align-items: center;
