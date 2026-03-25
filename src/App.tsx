@@ -13,6 +13,10 @@ import {
   OnConnect,
   Node,
   Viewport,
+  Handle,
+  Position,
+  BezierEdge,
+  Edge,
 } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
 
@@ -23,6 +27,7 @@ import ControlBar from './components/ControlBar'
 function TextNode({ data }: { data: { label: string } }) {
   return (
     <div className="custom-node text-node">
+      <Handle type="target" position={Position.Left} id="left" className="node-handle" />
       <div className="node-header">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
           <path d="M12 4v16"></path>
@@ -34,6 +39,7 @@ function TextNode({ data }: { data: { label: string } }) {
       <div className="node-body">
         <div className="placeholder-text">点击编辑文本内容</div>
       </div>
+      <Handle type="source" position={Position.Right} id="right" className="node-handle" />
     </div>
   )
 }
@@ -41,6 +47,7 @@ function TextNode({ data }: { data: { label: string } }) {
 function ImageNode({ data }: { data: { label: string } }) {
   return (
     <div className="custom-node image-node">
+      <Handle type="target" position={Position.Left} id="left" className="node-handle" />
       <div className="node-header">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
           <rect width="18" height="18" x="3" y="3" rx="2" ry="2"></rect>
@@ -52,6 +59,7 @@ function ImageNode({ data }: { data: { label: string } }) {
       <div className="node-body">
         <div className="placeholder-text">点击添加图片</div>
       </div>
+      <Handle type="source" position={Position.Right} id="right" className="node-handle" />
     </div>
   )
 }
@@ -59,6 +67,7 @@ function ImageNode({ data }: { data: { label: string } }) {
 function VideoNode({ data }: { data: { label: string } }) {
   return (
     <div className="custom-node video-node">
+      <Handle type="target" position={Position.Left} id="left" className="node-handle" />
       <div className="node-header">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
           <path d="m16 13 5.223 3.482a.5.5 0 0 0 .777-.416V7.87a.5.5 0 0 0-.752-.432L16 10.5"></path>
@@ -69,6 +78,7 @@ function VideoNode({ data }: { data: { label: string } }) {
       <div className="node-body">
         <div className="placeholder-text">点击添加视频</div>
       </div>
+      <Handle type="source" position={Position.Right} id="right" className="node-handle" />
     </div>
   )
 }
@@ -76,6 +86,7 @@ function VideoNode({ data }: { data: { label: string } }) {
 function AudioNode({ data }: { data: { label: string } }) {
   return (
     <div className="custom-node audio-node">
+      <Handle type="target" position={Position.Left} id="left" className="node-handle" />
       <div className="node-header">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
           <path d="M9 18V5l12-2v13"></path>
@@ -87,6 +98,7 @@ function AudioNode({ data }: { data: { label: string } }) {
       <div className="node-body">
         <div className="placeholder-text">点击添加音频</div>
       </div>
+      <Handle type="source" position={Position.Right} id="right" className="node-handle" />
     </div>
   )
 }
@@ -98,9 +110,13 @@ const nodeTypes = {
   audio: AudioNode,
 }
 
+const edgeTypes = {
+  bezier: BezierEdge,
+}
+
 function FlowWithControls() {
   const [nodes, setNodes, onNodesChange] = useNodesState([])
-  const [edges, setEdges, onEdgesChange] = useEdgesState([])
+  const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([])
   const [showMinimap, setShowMinimap] = useState(true)
   const [snapToGrid, setSnapToGrid] = useState(false)
   const [zoom, setZoom] = useState(1)
@@ -109,9 +125,32 @@ function FlowWithControls() {
 
   const onConnect: OnConnect = useCallback(
     (connection: Connection) => {
-      setEdges((eds) => addEdge({ ...connection, type: 'smoothstep' }, eds))
+      // 检查是否重复连线
+      const exists = edges.some(
+        (e) => e.source === connection.source && e.target === connection.target
+      )
+      if (exists) {
+        return // 不添加重复的边
+      }
+      setEdges((eds) => addEdge({ ...connection, type: 'bezier' }, eds))
     },
-    [setEdges]
+    [setEdges, edges]
+  )
+
+  // 连线规则：只能从源节点的右侧连接到目标节点的左侧，不能自己连自己
+  const isValidConnection = useCallback(
+    (connection: Edge | Connection) => {
+      const source = connection.source
+      const target = connection.target
+
+      // 不能自己连自己
+      if (source === target) {
+        return false
+      }
+
+      return true
+    },
+    []
   )
 
   const addNode = useCallback(
@@ -164,11 +203,14 @@ function FlowWithControls() {
         onConnect={onConnect}
         onMoveEnd={handleMoveEnd}
         nodeTypes={nodeTypes}
+        edgeTypes={edgeTypes}
+        isValidConnection={isValidConnection}
         fitView
         snapToGrid={snapToGrid}
         snapGrid={[20, 20]}
         deleteKeyCode="Delete"
         proOptions={{ hideAttribution: true }}
+        defaultEdgeOptions={{ type: 'bezier' }}
         style={{ background: '#1a1a1a' }}
       >
         <Background
