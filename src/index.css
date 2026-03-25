@@ -283,27 +283,23 @@ body {
   stroke-width: 2;
 }
 
-/* React Flow edge - 只保留基本样式，让 React Flow 处理选中状态 */
+/* React Flow edge - 禁用悬停变色，只有点击选中才变色 */
 .react-flow__edge-path {
-  stroke: rgba(255, 255, 255, 0.4);
+  stroke: #ffffff;
   stroke-width: 2;
   cursor: pointer;
-  transition: stroke 0.15s ease;
+  transition: stroke 0.2s ease;
 }
 
+/* 禁用悬停变色效果 */
 .react-flow__edge:hover .react-flow__edge-path {
-  stroke: #818cf8;
+  stroke: #ffffff !important;
 }
 
-/* React Flow 默认的选中样式 */
+/* 选中状态 - 蓝色高亮 */
 .react-flow__edge.selected .react-flow__edge-path {
-  stroke: #6366f1 !important;
+  stroke: #3b82f6 !important;
   stroke-width: 2.5 !important;
-}
-
-/* 确保选中状态有最高优先级 */
-[class*="selected"] .react-flow__edge-path {
-  stroke: #6366f1 !important;
 }
 
 /* React Flow Minimap */

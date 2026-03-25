@@ -15,8 +15,9 @@ import {
   Viewport,
   Handle,
   Position,
-  BezierEdge,
+  EdgeProps,
   Edge,
+  getBezierPath,
 } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
 
@@ -110,8 +111,55 @@ const nodeTypes = {
   audio: AudioNode,
 }
 
+// 自定义贝塞尔边：悬停不变色，点击才选中变色
+function CustomBezierEdge({
+  id,
+  sourceX,
+  sourceY,
+  targetX,
+  targetY,
+  sourcePosition,
+  targetPosition,
+  selected,
+  style,
+}: EdgeProps) {
+  const [edgePath] = getBezierPath({
+    sourceX,
+    sourceY,
+    sourcePosition,
+    targetX,
+    targetY,
+    targetPosition,
+  })
+
+  return (
+    <>
+      {/* 透明的可点击区域（用于增大点击范围） */}
+      <path
+        d={edgePath}
+        fill="none"
+        stroke="transparent"
+        strokeWidth={20}
+        style={{ cursor: 'pointer' }}
+      />
+      {/* 可见的边 */}
+      <path
+        id={id}
+        d={edgePath}
+        fill="none"
+        stroke={selected ? '#3b82f6' : '#ffffff'}
+        strokeWidth={2}
+        style={{
+          transition: 'stroke 0.2s',
+          ...style,
+        }}
+      />
+    </>
+  )
+}
+
 const edgeTypes = {
-  bezier: BezierEdge,
+  bezier: CustomBezierEdge,
 }
 
 function FlowWithControls() {
