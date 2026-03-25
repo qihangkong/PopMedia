@@ -223,10 +223,11 @@ function FlowWithControls() {
           <MiniMap
             nodeColor="rgba(100, 100, 100, 0.5)"
             maskColor="rgba(0, 0, 0, 0.6)"
+            pannable
+            zoomable
             style={{
               background: 'rgba(30, 30, 30, 0.9)',
-              border: '1px solid rgba(255, 255, 255, 0.1)',
-              borderRadius: 8,
+              borderRadius: 12,
             }}
           />
         )}
