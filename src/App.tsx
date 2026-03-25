@@ -202,13 +202,18 @@ function FlowWithControls() {
         onEdgesChange={onEdgesChange}
         onConnect={onConnect}
         onMoveEnd={handleMoveEnd}
+        onDoubleClick={(e) => {
+          e.stopPropagation()
+        }}
         nodeTypes={nodeTypes}
         edgeTypes={edgeTypes}
         isValidConnection={isValidConnection}
         fitView
+        fitViewOptions={{ maxZoom: 1, padding: 0.5 }}
         snapToGrid={snapToGrid}
         snapGrid={[20, 20]}
         deleteKeyCode="Delete"
+        zoomOnDoubleClick={false}
         proOptions={{ hideAttribution: true }}
         defaultEdgeOptions={{ type: 'bezier' }}
         style={{ background: '#1a1a1a' }}
