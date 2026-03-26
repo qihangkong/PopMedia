@@ -1,4 +1,4 @@
-import { useCallback, useState, memo, useRef, type JSX } from 'react'
+import { useCallback, useState, memo, useRef } from 'react'
 import {
   ReactFlow,
   ReactFlowProvider,
@@ -21,6 +21,7 @@ import {
 } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
 
+import { NodeTypeIcon } from './icons'
 import Sidebar from './components/Sidebar'
 import ControlBar from './components/ControlBar'
 
@@ -87,37 +88,6 @@ const ResizeHandle = ({ nodeId, onResize }: { nodeId: string; onResize: (nodeId:
   )
 }
 
-// 节点类型映射
-const nodeIcons: Record<string, JSX.Element> = {
-  text: (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <path d="M12 4v16"></path>
-      <path d="M4 7V5a1 1 0 0 1 1-1h14a1 1 0 0 1 1 1v2"></path>
-      <path d="M9 20h6"></path>
-    </svg>
-  ),
-  image: (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <rect width="18" height="18" x="3" y="3" rx="2" ry="2"></rect>
-      <circle cx="9" cy="9" r="2"></circle>
-      <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"></path>
-    </svg>
-  ),
-  video: (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <path d="m16 13 5.223 3.482a.5.5 0 0 0 .777-.416V7.87a.5.5 0 0 0-.752-.432L16 10.5"></path>
-      <rect x="2" y="6" width="14" height="12" rx="2"></rect>
-    </svg>
-  ),
-  audio: (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <path d="M9 18V5l12-2v13"></path>
-      <circle cx="6" cy="18" r="3"></circle>
-      <circle cx="18" cy="16" r="3"></circle>
-    </svg>
-  ),
-}
-
 const nodeLabels: Record<string, string> = {
   text: '文本',
   image: '图片',
@@ -154,7 +124,7 @@ function createNodeComponent(type: string) {
         style={{ width: '100%', height: '100%' }}
       >
         <div className={`node-header ${type}-header`}>
-          {nodeIcons[type]}
+          <NodeTypeIcon type={type} />
           <input
             className={`node-label-input ${type}-label-input`}
             defaultValue={data.label || nodeLabels[type]}
