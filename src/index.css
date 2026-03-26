@@ -33,6 +33,7 @@ body {
   backdrop-filter: blur(8px);
 }
 
+
 .sidebar-btn {
   display: flex;
   align-items: center;
@@ -547,4 +548,79 @@ body {
 .zoom-menu-item.active {
   background: rgba(99, 102, 241, 0.3);
   color: #818cf8;
+}
+
+/* ============================================================
+   Canvas Header Bar
+   ============================================================ */
+
+.canvas-header-bar {
+  position: fixed;
+  top: 16px;
+  left: 16px;
+  z-index: 50;
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.canvas-header-inner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 6px 12px;
+  background: rgba(40, 40, 40, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  backdrop-filter: blur(8px);
+}
+
+.canvas-header-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  flex-shrink: 0;
+}
+
+.canvas-header-brand {
+  color: #fff;
+  font-weight: 700;
+  font-size: 16px;
+  user-select: none;
+  cursor: pointer;
+  transition: color 0.15s ease;
+}
+
+.canvas-header-brand:hover {
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.canvas-header-sep {
+  color: rgba(255, 255, 255, 0.25);
+  font-size: 14px;
+  cursor: default;
+  user-select: none;
+}
+
+.canvas-header-canvas-name {
+  color: rgba(255, 255, 255, 0.7);
+  font-weight: 500;
+  font-size: 14px;
+  font-family: inherit;
+  cursor: text;
+  padding: 0;
+  border-radius: 2px;
+  outline: none;
+  transition: color 0.15s ease;
+  white-space: nowrap;
+}
+
+.canvas-header-canvas-name:hover {
+  color: rgba(255, 255, 255, 1);
+}
+
+.canvas-header-canvas-name:focus {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.05);
 }

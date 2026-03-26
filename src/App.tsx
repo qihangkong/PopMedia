@@ -263,6 +263,7 @@ function FlowWithControls() {
   const [showMinimap, setShowMinimap] = useState(true)
   const [snapToGrid, setSnapToGrid] = useState(false)
   const [zoom, setZoom] = useState(DEFAULT_ZOOM)
+  const [canvasName, setCanvasName] = useState('未命名的画布')
 
   const { zoomIn, zoomOut, getViewport, setViewport } = useReactFlow()
 
@@ -326,6 +327,24 @@ function FlowWithControls() {
   return (
     <>
       <Sidebar onAddNode={addNode} />
+
+      {/* Header navigation bar */}
+      <div className="canvas-header-bar">
+        <div className="canvas-header-inner">
+          <img className="canvas-header-icon" src="/PopMedia.png" alt="PopMedia" />
+          <span className="canvas-header-brand">PopMedia</span>
+          <span className="canvas-header-sep">|</span>
+          <span
+            className="canvas-header-canvas-name"
+            contentEditable
+            suppressContentEditableWarning
+            onBlur={(e) => setCanvasName(e.currentTarget.textContent || '')}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {canvasName}
+          </span>
+        </div>
+      </div>
 
       <ReactFlow
         nodes={nodes}
