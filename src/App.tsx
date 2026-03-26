@@ -153,11 +153,11 @@ function createNodeComponent(type: string) {
         data-id={id}
         style={{ width: '100%', height: '100%' }}
       >
-        <Handle type="target" position={Position.Left} id="left" className="node-handle" />
-        <div className="node-header">
+        <div className={`node-header ${type}-header`}>
           {nodeIcons[type]}
           <span>{data.label || nodeLabels[type]}</span>
         </div>
+        <Handle type="target" position={Position.Left} id="left" className="node-handle" />
         <div className="node-body">
           <div className="placeholder-text">点击{type === 'text' ? '编辑' : '添加'}{nodeLabels[type]}</div>
         </div>
