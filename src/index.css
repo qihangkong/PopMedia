@@ -198,17 +198,20 @@ body {
   text-overflow: ellipsis;
 }
 
-/* Custom Nodes */
+/* ============================================================
+   Custom Nodes
+   ============================================================ */
+
 .custom-node {
   background: rgba(30, 30, 30, 0.95);
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 12px;
-  width: 200px;
-  height: 100px;
   overflow: visible;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   position: relative;
-  padding-top: 8px;
+  /* 尺寸由 JS style prop 控制 */
+  width: 200px;
+  height: 100px;
 }
 
 .custom-node:hover {
@@ -220,10 +223,9 @@ body {
   box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.4);
 }
 
-/* 锁定选中状态下显示手柄 */
-.custom-node.selected .react-flow__handle {
-  opacity: 1 !important;
-}
+/* ============================================================
+   Node Header
+   ============================================================ */
 
 .node-header {
   position: absolute;
@@ -241,25 +243,10 @@ body {
   line-height: 1;
 }
 
-.text-header {
-  color: #818cf8;
-}
-
-.text-label-input {
-  color: #818cf8;
-}
-
-.image-label-input {
-  color: #34d399;
-}
-
-.video-label-input {
-  color: #f472b6;
-}
-
-.audio-label-input {
-  color: #fbbf24;
-}
+.text-header  { color: #818cf8; }
+.image-header  { color: #34d399; }
+.video-header  { color: #f472b6; }
+.audio-header  { color: #fbbf24; }
 
 .node-label-input {
   background: transparent;
@@ -274,21 +261,10 @@ body {
   vertical-align: top;
 }
 
-.node-label-input:focus {
-  outline: none;
-}
-
-.image-header {
-  color: #34d399;
-}
-
-.video-header {
-  color: #f472b6;
-}
-
-.audio-header {
-  color: #fbbf24;
-}
+.text-label-input  { color: #818cf8; }
+.image-label-input { color: #34d399; }
+.video-label-input { color: #f472b6; }
+.audio-label-input { color: #fbbf24; }
 
 .node-body {
   padding: 16px;
@@ -301,43 +277,21 @@ body {
   text-align: center;
 }
 
-/* React Flow Handle styling */
-.react-flow__handle {
-  width: 14px !important;
-  height: 14px !important;
-  border: 2px solid #6366f1 !important;
-  background: #2a2a2a !important;
-  transition: all 0.15s ease !important;
-  /* 手柄默认隐藏 */
-  opacity: 0 !important;
-  z-index: 10 !important;
+/* ============================================================
+   React Flow Handle — 手柄尺寸/颜色/位置由 JS inline style 设置，
+   这里只处理需要组合选择器的可见性规则
+   ============================================================ */
+
+/* 节点悬停 / 选中时显示手柄 — 组合选择器特异性高于 react-flow 默认 */
+.custom-node:hover .react-flow__handle,
+.custom-node.selected .react-flow__handle {
+  opacity: 1;
 }
 
-.react-flow__handle:hover {
-  background: #818cf8 !important;
-  border-color: #818cf8 !important;
-}
+/* ============================================================
+   Resize Handle — 右下角拖拽调整大小手柄
+   ============================================================ */
 
-/* 鼠标悬停在节点上时显示手柄 */
-.custom-node:hover .react-flow__handle {
-  opacity: 1 !important;
-}
-
-.react-flow__handle-left {
-  left: -7px !important;
-}
-
-.react-flow__handle-right {
-  right: -7px !important;
-}
-
-/* React Flow connection line */
-.react-flow__connection-line {
-  stroke: #6366f1;
-  stroke-width: 2;
-}
-
-/* 节点右下角拖拽调整大小手柄 - 与连接手柄显示逻辑一致 */
 .resize-handle {
   position: absolute;
   right: 0;
@@ -348,34 +302,39 @@ body {
   align-items: center;
   justify-content: center;
   cursor: se-resize;
-  /* 与连接手柄一致的隐藏规则 */
-  opacity: 0 !important;
-  transition: all 0.15s ease !important;
+  opacity: 0;
+  transition: opacity 0.15s ease, color 0.15s ease;
   z-index: 10;
-  /* 阻止 React Flow 的节点拖拽事件 */
   touch-action: none;
 }
 
-/* 鼠标悬停在节点上时显示手柄 */
-.custom-node:hover .resize-handle {
-  opacity: 1 !important;
-}
-
-/* 节点选中时显示手柄 - 与连接手柄一致 */
+/* 节点悬停 / 选中时显示 resize 手柄 */
+.custom-node:hover .resize-handle,
 .custom-node.selected .resize-handle {
-  opacity: 1 !important;
+  opacity: 1;
 }
 
-/* 手柄悬停效果 - 改变图标颜色 */
 .resize-handle:hover {
-  color: #818cf8 !important;
+  color: #818cf8;
 }
 
 .resize-handle svg {
   pointer-events: none;
 }
 
-/* React Flow edge - 禁用悬停变色，只有点击选中才变色 */
+/* ============================================================
+   React Flow Connection Line
+   ============================================================ */
+
+.react-flow__connection-line {
+  stroke: #6366f1;
+  stroke-width: 2;
+}
+
+/* ============================================================
+   React Flow Edge — 悬停不变色，选中变蓝
+   ============================================================ */
+
 .react-flow__edge-path {
   stroke: #ffffff;
   stroke-width: 2;
@@ -383,50 +342,79 @@ body {
   transition: stroke 0.2s ease;
 }
 
-/* 禁用悬停变色效果 */
+/* 组合选择器覆盖 React Flow 默认 hover 样式，无需 !important */
 .react-flow__edge:hover .react-flow__edge-path {
-  stroke: #ffffff !important;
+  stroke: #ffffff;
 }
 
-/* 选中状态 - 蓝色高亮 */
+/* 选中状态 — 必须用 !important 覆盖 React Flow 默认 */
 .react-flow__edge.selected .react-flow__edge-path {
   stroke: #3b82f6 !important;
   stroke-width: 2.5 !important;
 }
 
-/* React Flow Minimap */
-.react-flow__minimap {
-  background: rgba(30, 30, 30, 0.9) !important;
-  border: none !important;
-  border-radius: 12px !important;
-  overflow: hidden !important;
-  padding: 0 !important;
+/* ============================================================
+   React Flow Selection — 禁用画布选择框（覆盖内置样式）
+   ============================================================ */
+
+.react-flow__pane {
+  cursor: default;
 }
 
-.react-flow__minimap-svg {
-  border-radius: 12px !important;
-  overflow: hidden !important;
+.react-flow__selection {
+  background: transparent !important;
+  border: none !important;
+}
+
+.react-flow__selection-scanner {
+  display: none !important;
+}
+
+/* ============================================================
+   React Flow Minimap
+   ============================================================ */
+
+.custom-minimap {
+  background: rgba(30, 30, 30, 0.9);
+  border: none;
+  border-radius: 12px;
+  overflow: hidden;
+  padding: 0;
+}
+
+.custom-minimap .react-flow__minimap-svg {
+  border-radius: 12px;
+  overflow: hidden;
 }
 
 .react-flow__minimap-mask {
-  fill: rgba(0, 0, 0, 0.6) !important;
-  stroke: none !important;
+  fill: rgba(0, 0, 0, 0.6);
 }
 
 .react-flow__minimap-node {
-  fill: rgba(100, 100, 100, 0.5) !important;
+  fill: rgba(100, 100, 100, 0.5);
 }
 
 .react-flow__minimap-node.selected {
-  fill: rgba(99, 102, 241, 0.5) !important;
+  fill: rgba(99, 102, 241, 0.5);
 }
 
-/* 调整 MiniMap 视口位置，让内外间距均匀 */
 .react-flow__minimap-viewport {
-  transform: translateY(-5px) !important;
+  transform: translateY(-5px);
 }
 
-/* Canvas Controls - 固定在左侧 */
+/* ============================================================
+   React Flow Selection — 禁用画布选择框
+   ============================================================ */
+
+.react-flow__pane {
+  cursor: default;
+}
+
+/* ============================================================
+   Canvas Controls
+   ============================================================ */
+
 .canvas-controls {
   position: absolute;
   bottom: 16px;
@@ -440,20 +428,6 @@ body {
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 12px;
   backdrop-filter: blur(8px);
-}
-
-/* 禁用 React Flow 点击画布时的选择框效果 */
-.react-flow__pane {
-  cursor: default;
-}
-
-.react-flow__selection {
-  background: transparent !important;
-  border: none !important;
-}
-
-.react-flow__selection-scanner {
-  display: none !important;
 }
 
 .controls-btn {

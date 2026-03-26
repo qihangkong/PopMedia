@@ -27,6 +27,7 @@ import {
   NODE_HEIGHT,
   NODE_MIN_WIDTH,
   NODE_MIN_HEIGHT,
+  HANDLE_SIZE,
   HANDLE_RADIUS,
   GRID_SIZE,
   GRID_SNAP,
@@ -152,11 +153,33 @@ function createNodeComponent(type: string) {
             }}
           />
         </div>
-        <Handle type="target" position={Position.Left} id="left" className="node-handle" />
+        <Handle
+          type="target"
+          position={Position.Left}
+          id="left"
+          className="node-handle"
+          style={{
+            width: HANDLE_SIZE,
+            height: HANDLE_SIZE,
+            border: '2px solid #6366f1',
+            background: '#2a2a2a',
+          }}
+        />
         <div className="node-body">
           <div className="placeholder-text">点击{type === 'text' ? '编辑' : '添加'}{nodeLabels[type]}</div>
         </div>
-        <Handle type="source" position={Position.Right} id="right" className="node-handle" />
+        <Handle
+          type="source"
+          position={Position.Right}
+          id="right"
+          className="node-handle"
+          style={{
+            width: HANDLE_SIZE,
+            height: HANDLE_SIZE,
+            border: '2px solid #6366f1',
+            background: '#2a2a2a',
+          }}
+        />
         <ResizeHandle nodeId={id} onResize={onResize} />
       </div>
     )
@@ -353,8 +376,8 @@ function FlowWithControls() {
             maskColor="rgba(0, 0, 0, 0.6)"
             pannable
             zoomable
+            className="custom-minimap"
             style={{
-              background: 'rgba(30, 30, 30, 0.9)',
               borderRadius: 12,
               position: 'absolute',
               left: 16,
