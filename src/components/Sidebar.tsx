@@ -2,11 +2,6 @@ import { useState } from 'react'
 
 import {
   PlusIcon,
-  TypeIcon,
-  ImageIcon,
-  VideoIcon,
-  MusicIcon,
-  FileTextIcon,
   UploadIcon,
   LibraryIcon,
   LayoutGridIcon,
@@ -15,6 +10,7 @@ import {
   QuestionIcon,
   MessageIcon,
 } from '../icons'
+import { NODE_TYPES_META } from '../nodeTypes'
 
 interface SidebarProps {
   onAddNode: (type: string) => void
@@ -23,13 +19,8 @@ interface SidebarProps {
 export default function Sidebar({ onAddNode }: SidebarProps) {
   const [showAddMenu, setShowAddMenu] = useState(false)
 
-  const nodeTypes = [
-    { id: 'text', label: '文本', desc: '剧本、广告词、品牌文案', icon: TypeIcon },
-    { id: 'image', label: '图片', desc: '海报、分镜、角色设计', icon: ImageIcon },
-    { id: 'video', label: '视频', desc: '创意广告、动画、电影', icon: VideoIcon },
-    { id: 'audio', label: '音频', desc: '音效、配音、音乐', icon: MusicIcon },
-    { id: 'script', label: '脚本', desc: '创意脚本、生成故事板', icon: FileTextIcon, badge: 'Beta' },
-  ]
+  // 节点类型菜单 — 从 nodeTypes.ts 统一导入
+  const nodeMenuItems = NODE_TYPES_META
 
   const resources = [
     { id: 'upload', label: '上传', desc: '可上传图片、视频、音频文件', icon: UploadIcon },
@@ -60,7 +51,7 @@ export default function Sidebar({ onAddNode }: SidebarProps) {
             <div className="add-menu-dropdown">
               <h4 className="add-menu-title">添加节点</h4>
 
-              {nodeTypes.map((node) => (
+              {nodeMenuItems.map((node) => (
                 <button
                   key={node.id}
                   className="add-menu-item"

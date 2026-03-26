@@ -29,18 +29,3 @@ export const ZOOM_OPTIONS = [
   { label: '200%', value: 2 },
 ]
 
-// 节点类型标签
-export const NODE_LABELS: Record<string, string> = {
-  text: '文本',
-  image: '图片',
-  video: '视频',
-  audio: '音频',
-}
-
-// 节点类型颜色
-export const NODE_COLORS: Record<string, string> = {
-  text: '#818cf8',   // indigo-400
-  image: '#34d399',   // emerald-400
-  video: '#f472b6',   // pink-400
-  audio: '#fbbf24',   // amber-400
-}

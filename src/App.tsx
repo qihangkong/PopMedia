@@ -22,6 +22,7 @@ import {
 import '@xyflow/react/dist/style.css'
 
 import { NodeTypeIcon } from './icons'
+import { NODE_TYPE_MAP } from './nodeTypes'
 import {
   NODE_WIDTH,
   NODE_HEIGHT,
@@ -101,102 +102,84 @@ const ResizeHandle = ({ nodeId, onResize }: { nodeId: string; onResize: (nodeId:
   )
 }
 
-const nodeLabels: Record<string, string> = {
-  text: '文本',
-  image: '图片',
-  video: '视频',
-  audio: '音频',
-}
+// 通用节点组件 — 所有类型共用，根据 type prop 渲染不同样式
+function BaseNode({ data, selected, id }: { data: { label: string; type: string }; selected: boolean; id: string }) {
+  const { setNodes } = useReactFlow()
+  const type = data.type || 'text'
+  const meta = NODE_TYPE_MAP[type]
 
-// 节点工厂函数
-function createNodeComponent(type: string) {
-  const NodeComponent = memo(function NodeComponent({ data, selected, id }: { data: { label: string }; selected: boolean; id: string }) {
-    const { setNodes } = useReactFlow()
-    const onResize = useCallback((nodeId: string, width: number, height: number) => {
-      setNodes((nds) =>
-        nds.map((node) => {
-          if (node.id === nodeId) {
-            return {
-              ...node,
-              style: {
-                ...node.style,
-                width,
-                height,
-              },
-            }
-          }
-          return node
-        })
-      )
-    }, [setNodes])
-
-    return (
-      <div
-        className={`custom-node ${type}-node${selected ? ' selected' : ''}`}
-        data-id={id}
-        style={{ width: '100%', height: '100%' }}
-      >
-        <div className={`node-header ${type}-header`}>
-          <NodeTypeIcon type={type} />
-          <input
-            className={`node-label-input ${type}-label-input`}
-            defaultValue={data.label || nodeLabels[type]}
-            onBlur={(e) => {
-              setNodes((nds) =>
-                nds.map((node) => {
-                  if (node.id === id) {
-                    return { ...node, data: { ...node.data, label: e.target.value } }
-                  }
-                  return node
-                })
-              )
-            }}
-          />
-        </div>
-        <Handle
-          type="target"
-          position={Position.Left}
-          id="left"
-          className="node-handle"
-          style={{
-            width: HANDLE_SIZE,
-            height: HANDLE_SIZE,
-            border: '2px solid #6366f1',
-            background: '#2a2a2a',
-          }}
-        />
-        <div className="node-body">
-          <div className="placeholder-text">点击{type === 'text' ? '编辑' : '添加'}{nodeLabels[type]}</div>
-        </div>
-        <Handle
-          type="source"
-          position={Position.Right}
-          id="right"
-          className="node-handle"
-          style={{
-            width: HANDLE_SIZE,
-            height: HANDLE_SIZE,
-            border: '2px solid #6366f1',
-            background: '#2a2a2a',
-          }}
-        />
-        <ResizeHandle nodeId={id} onResize={onResize} />
-      </div>
+  const onResize = useCallback((nodeId: string, width: number, height: number) => {
+    setNodes((nds) =>
+      nds.map((node) => {
+        if (node.id === nodeId) {
+          return { ...node, style: { ...node.style, width, height } }
+        }
+        return node
+      })
     )
-  })
-  return NodeComponent
+  }, [setNodes])
+
+  return (
+    <div
+      className={`custom-node ${type}-node${selected ? ' selected' : ''}`}
+      data-id={id}
+      style={{ width: '100%', height: '100%' }}
+    >
+      <div className={`node-header ${type}-header`}>
+        <NodeTypeIcon type={type} />
+        <input
+          className={`node-label-input ${type}-label-input`}
+          defaultValue={data.label || meta?.label}
+          onBlur={(e) => {
+            setNodes((nds) =>
+              nds.map((node) => {
+                if (node.id === id) {
+                  return { ...node, data: { ...node.data, label: e.target.value } }
+                }
+                return node
+              })
+            )
+          }}
+        />
+      </div>
+      <Handle
+        type="target"
+        position={Position.Left}
+        id="left"
+        className="node-handle"
+        style={{
+          width: HANDLE_SIZE,
+          height: HANDLE_SIZE,
+          border: '2px solid #6366f1',
+          background: '#2a2a2a',
+        }}
+      />
+      <div className="node-body">
+        <div className="placeholder-text">{meta?.placeholderText}</div>
+      </div>
+      <Handle
+        type="source"
+        position={Position.Right}
+        id="right"
+        className="node-handle"
+        style={{
+          width: HANDLE_SIZE,
+          height: HANDLE_SIZE,
+          border: '2px solid #6366f1',
+          background: '#2a2a2a',
+        }}
+      />
+      <ResizeHandle nodeId={id} onResize={onResize} />
+    </div>
+  )
 }
 
-const TextNode = createNodeComponent('text')
-const ImageNode = createNodeComponent('image')
-const VideoNode = createNodeComponent('video')
-const AudioNode = createNodeComponent('audio')
-
-const nodeTypes = {
-  text: TextNode,
-  image: ImageNode,
-  video: VideoNode,
-  audio: AudioNode,
+// 节点类型映射 — 所有类型共用 BaseNode，通过 data.type 区分
+export const nodeTypes = {
+  text: memo(BaseNode),
+  image: memo(BaseNode),
+  video: memo(BaseNode),
+  audio: memo(BaseNode),
 }
 
 // 手柄半径，用于将连线端点从手柄中心收缩到节点边框
@@ -320,7 +303,7 @@ function FlowWithControls() {
           x: Math.random() * 300 + 100,
           y: Math.random() * 200 + 100,
         },
-        data: { label: `${type}节点` },
+        data: { label: `${type}节点`, type },
         style: { width: NODE_WIDTH, height: NODE_HEIGHT },
       }
       setNodes((nds) => [...nds, newNode])
