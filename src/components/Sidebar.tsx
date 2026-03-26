@@ -98,25 +98,30 @@ export default function Sidebar({ onAddNode }: SidebarProps) {
         )}
       </div>
 
-      {/* Other sidebar buttons */}
+      {/* Other sidebar buttons — TODO: implement functionality */}
+      {/* 工具箱 */}
       <button className="sidebar-btn" aria-label="打开工具箱">
         <LayoutGridIcon />
       </button>
 
+      {/* 我的素材 */}
       <button className="sidebar-btn" aria-label="我的素材">
         <FolderOpenIcon />
       </button>
 
+      {/* 历史记录 */}
       <button className="sidebar-btn" aria-label="历史记录">
         <HistoryIcon />
       </button>
 
       <div className="sidebar-divider"></div>
 
+      {/* 教程 */}
       <button className="sidebar-btn" aria-label="教程">
         <QuestionIcon />
       </button>
 
+      {/* 联系客服 */}
       <button className="sidebar-btn" aria-label="联系客服">
         <MessageIcon />
       </button>
