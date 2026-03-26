@@ -9,7 +9,8 @@
     "preview": "vite preview",
     "tauri": "tauri",
     "tauri:dev": "tauri dev",
-    "tauri:build": "tauri build"
+    "tauri:build": "tauri build",
+    "clean:db": "node scripts/clean-db.js"
   },
   "dependencies": {
     "@tauri-apps/api": "^2.10.1",
