@@ -261,7 +261,9 @@ body {
   height: 14px !important;
   border: 2px solid #6366f1 !important;
   background: #2a2a2a !important;
-  transition: all 0.15s ease;
+  transition: all 0.15s ease !important;
+  /* 手柄默认隐藏 */
+  opacity: 0 !important;
 }
 
 .react-flow__handle:hover {
@@ -269,12 +271,17 @@ body {
   border-color: #818cf8 !important;
 }
 
+/* 鼠标悬停在节点上时显示手柄 */
+.custom-node:hover .react-flow__handle {
+  opacity: 1 !important;
+}
+
 .react-flow__handle-left {
-  left: -10px !important;
+  left: -7px !important;
 }
 
 .react-flow__handle-right {
-  right: -10px !important;
+  right: -7px !important;
 }
 
 /* React Flow connection line */

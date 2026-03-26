@@ -111,24 +111,47 @@ const nodeTypes = {
   audio: AudioNode,
 }
 
-// 自定义贝塞尔边：悬停不变色，点击才选中变色
+// 手柄半径（手柄宽14px的一半），用于将连线端点从手柄中心收缩到节点边框
+const HANDLE_RADIUS = 7
+
+// 自定义贝塞尔边：连线端点贴合节点边框，悬停不变色，点击才选中变色
 function CustomBezierEdge({
   id,
   sourceX,
   sourceY,
+  sourcePosition,
   targetX,
   targetY,
-  sourcePosition,
   targetPosition,
   selected,
   style,
 }: EdgeProps) {
+  // 根据手柄位置计算偏移量，向节点内部收缩
+  const getOffset = (pos: Position) => {
+    const offset = HANDLE_RADIUS * 2
+    switch (pos) {
+      case Position.Left:
+        return { x: offset, y: 0 }
+      case Position.Right:
+        return { x: -offset, y: 0 }
+      case Position.Top:
+        return { x: 0, y: -offset }
+      case Position.Bottom:
+        return { x: 0, y: offset }
+      default:
+        return { x: 0, y: 0 }
+    }
+  }
+
+  const sourceOff = getOffset(sourcePosition)
+  const targetOff = getOffset(targetPosition)
+
   const [edgePath] = getBezierPath({
-    sourceX,
-    sourceY,
+    sourceX: sourceX + sourceOff.x,
+    sourceY: sourceY + sourceOff.y,
     sourcePosition,
-    targetX,
-    targetY,
+    targetX: targetX + targetOff.x,
+    targetY: targetY + targetOff.y,
     targetPosition,
   })
 
