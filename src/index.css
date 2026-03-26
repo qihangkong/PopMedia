@@ -16,6 +16,38 @@ body {
   color: #fff;
 }
 
+/* ============================================================
+   Page Layout — 页面布局
+   ============================================================ */
+
+.page-container {
+  width: 100vw;
+  height: 100vh;
+  position: relative;
+  overflow: hidden;
+}
+
+.page-content {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+}
+
+.page-content h1 {
+  font-size: 28px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.page-content p {
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.6);
+}
+
 /* Canvas Sidebar */
 .canvas-sidebar {
   position: fixed;
@@ -609,10 +641,57 @@ body {
   user-select: none;
   cursor: pointer;
   transition: color 0.15s ease;
+  background: none;
+  border: none;
+  padding: 0;
+  font-family: inherit;
 }
 
 .canvas-header-brand:hover {
   color: rgba(255, 255, 255, 0.8);
+}
+
+/* ============================================================
+   Brand Dropdown Menu — 品牌下拉菜单
+   ============================================================ */
+
+.brand-dropdown {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  min-width: 160px;
+  background: rgba(40, 40, 40, 0.98);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  backdrop-filter: blur(12px);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  overflow: hidden;
+  animation: fadeIn 0.15s ease;
+  z-index: 100;
+}
+
+.brand-dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 14px;
+  border: none;
+  background: none;
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  text-align: left;
+}
+
+.brand-dropdown-item:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+}
+
+.brand-dropdown-item svg {
+  flex-shrink: 0;
 }
 
 .canvas-header-sep {
