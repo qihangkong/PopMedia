@@ -1,0 +1,30 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "Default capabilities for PopMedia",
+  "windows": ["main"],
+  "permissions": [
+    "core:default",
+    "dialog:default",
+    "dialog:allow-open",
+    "dialog:allow-save",
+    "dialog:allow-message",
+    "dialog:allow-confirm",
+    "fs:default",
+    "fs:allow-read-text-file",
+    "fs:allow-write-text-file",
+    {
+      "identifier": "fs:scope",
+      "allow": [
+        "$APPDATA/**",
+        "$LOCALAPPDATA/**",
+        "$DOCUMENT/**",
+        "$PICTURE/**",
+        "$VIDEO/**",
+        "$AUDIO/**",
+        "$DOWNLOAD/**",
+        "$HOME/**"
+      ]
+    }
+  ]
+}
