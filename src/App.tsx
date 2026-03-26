@@ -155,7 +155,20 @@ function createNodeComponent(type: string) {
       >
         <div className={`node-header ${type}-header`}>
           {nodeIcons[type]}
-          <span>{data.label || nodeLabels[type]}</span>
+          <input
+            className={`node-label-input ${type}-label-input`}
+            defaultValue={data.label || nodeLabels[type]}
+            onBlur={(e) => {
+              setNodes((nds) =>
+                nds.map((node) => {
+                  if (node.id === id) {
+                    return { ...node, data: { ...node.data, label: e.target.value } }
+                  }
+                  return node
+                })
+              )
+            }}
+          />
         </div>
         <Handle type="target" position={Position.Left} id="left" className="node-handle" />
         <div className="node-body">
