@@ -1,4 +1,4 @@
-import { useCallback, useState, memo, useRef } from 'react'
+import { useCallback, useState, memo, useRef, useEffect } from 'react'
 import {
   ReactFlow,
   ReactFlowProvider,
@@ -103,11 +103,12 @@ const ResizeHandle = ({ nodeId, onResize }: { nodeId: string; onResize: (nodeId:
 }
 
 // 通用节点组件 — 所有类型共用，根据 type prop 渲染不同样式
-function BaseNode({ data, selected, id }: { data: { label: string; type: string }; selected: boolean; id: string }) {
+function BaseNode({ data, selected, id }: { data: { label: string; type: string; content?: string }; selected: boolean; id: string }) {
   const { setNodes } = useReactFlow()
   const type = data.type || 'text'
   const meta = NODE_TYPE_MAP[type]
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const onResize = useCallback((nodeId: string, width: number, height: number) => {
     setNodes((nds) =>
       nds.map((node) => {
@@ -118,6 +119,39 @@ function BaseNode({ data, selected, id }: { data: { label: string; type: string 
       })
     )
   }, [setNodes])
+
+  const isTextNode = type === 'text'
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
+
+  // 在 window 级别拦截 pointerdown/mousedown，判断 target 是否在 textarea 内，阻止冒泡以防触发节点拖拽
+  useEffect(() => {
+    const stopInTextarea = (e: Event) => {
+      if (!textareaRef.current) return
+      if (textareaRef.current.contains(e.target as globalThis.Node | null)) {
+        e.stopPropagation()
+      }
+    }
+    window.addEventListener('pointerdown', stopInTextarea, { capture: true })
+    window.addEventListener('mousedown', stopInTextarea, { capture: true })
+    return () => {
+      window.removeEventListener('pointerdown', stopInTextarea, { capture: true })
+      window.removeEventListener('mousedown', stopInTextarea, { capture: true })
+    }
+  }, [])
+
+  const updateContent = useCallback(
+    (newContent: string) => {
+      setNodes((nds) =>
+        nds.map((node) => {
+          if (node.id === id) {
+            return { ...node, data: { ...node.data, content: newContent } }
+          }
+          return node
+        })
+      )
+    },
+    [setNodes, id]
+  )
 
   return (
     <div
@@ -157,7 +191,19 @@ function BaseNode({ data, selected, id }: { data: { label: string; type: string 
         }}
       />
       <div className="node-body">
-        <div className="placeholder-text">{meta?.placeholderText}</div>
+        {isTextNode ? (
+          <textarea
+            ref={textareaRef}
+            className="text-node-content"
+            defaultValue={data.content || ''}
+            placeholder={meta?.placeholderText}
+            onBlur={(e) => {
+              updateContent(e.target.value)
+            }}
+          />
+        ) : (
+          <div className="placeholder-text">{meta?.placeholderText}</div>
+        )}
       </div>
       <Handle
         type="source"
@@ -306,7 +352,7 @@ function FlowWithControls() {
           x: Math.random() * 300 + 100,
           y: Math.random() * 200 + 100,
         },
-        data: { label: `${type}节点`, type },
+        data: { label: type === 'text' ? '文本节点' : `${type}节点`, type, ...(type === 'text' ? { content: '' } : {}) },
         style: { width: NODE_WIDTH, height: NODE_HEIGHT },
       }
       setNodes((nds) => [...nds, newNode])
