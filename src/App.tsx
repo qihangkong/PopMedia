@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react'
+import { useCallback, useState, memo } from 'react'
 import {
   ReactFlow,
   ReactFlowProvider,
@@ -25,9 +25,11 @@ import Sidebar from './components/Sidebar'
 import ControlBar from './components/ControlBar'
 
 // Custom node component
-function TextNode({ data }: { data: { label: string } }) {
+const TextNode = memo(function TextNode({ data, selected }: { data: { label: string }; selected: boolean }) {
   return (
-    <div className="custom-node text-node">
+    <div
+      className={`custom-node text-node${selected ? ' selected' : ''}`}
+    >
       <Handle type="target" position={Position.Left} id="left" className="node-handle" />
       <div className="node-header">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -43,11 +45,13 @@ function TextNode({ data }: { data: { label: string } }) {
       <Handle type="source" position={Position.Right} id="right" className="node-handle" />
     </div>
   )
-}
+})
 
-function ImageNode({ data }: { data: { label: string } }) {
+const ImageNode = memo(function ImageNode({ data, selected }: { data: { label: string }; selected: boolean }) {
   return (
-    <div className="custom-node image-node">
+    <div
+      className={`custom-node image-node${selected ? ' selected' : ''}`}
+    >
       <Handle type="target" position={Position.Left} id="left" className="node-handle" />
       <div className="node-header">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -63,11 +67,13 @@ function ImageNode({ data }: { data: { label: string } }) {
       <Handle type="source" position={Position.Right} id="right" className="node-handle" />
     </div>
   )
-}
+})
 
-function VideoNode({ data }: { data: { label: string } }) {
+const VideoNode = memo(function VideoNode({ data, selected }: { data: { label: string }; selected: boolean }) {
   return (
-    <div className="custom-node video-node">
+    <div
+      className={`custom-node video-node${selected ? ' selected' : ''}`}
+    >
       <Handle type="target" position={Position.Left} id="left" className="node-handle" />
       <div className="node-header">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -82,11 +88,13 @@ function VideoNode({ data }: { data: { label: string } }) {
       <Handle type="source" position={Position.Right} id="right" className="node-handle" />
     </div>
   )
-}
+})
 
-function AudioNode({ data }: { data: { label: string } }) {
+const AudioNode = memo(function AudioNode({ data, selected }: { data: { label: string }; selected: boolean }) {
   return (
-    <div className="custom-node audio-node">
+    <div
+      className={`custom-node audio-node${selected ? ' selected' : ''}`}
+    >
       <Handle type="target" position={Position.Left} id="left" className="node-handle" />
       <div className="node-header">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -102,7 +110,7 @@ function AudioNode({ data }: { data: { label: string } }) {
       <Handle type="source" position={Position.Right} id="right" className="node-handle" />
     </div>
   )
-}
+})
 
 const nodeTypes = {
   text: TextNode,
@@ -186,7 +194,7 @@ const edgeTypes = {
 }
 
 function FlowWithControls() {
-  const [nodes, setNodes, onNodesChange] = useNodesState([])
+  const [nodes, setNodes, onNodesChange] = useNodesState<Node>([])
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([])
   const [showMinimap, setShowMinimap] = useState(true)
   const [snapToGrid, setSnapToGrid] = useState(false)
@@ -240,7 +248,7 @@ function FlowWithControls() {
     [setNodes]
   )
 
-  const handleMoveEnd = useCallback((_: MouseEvent | TouchEvent, viewport: Viewport) => {
+  const handleMoveEnd = useCallback((_: MouseEvent | TouchEvent | null, viewport: Viewport) => {
     setZoom(viewport.zoom)
   }, [])
 

@@ -213,8 +213,13 @@ body {
 }
 
 .custom-node.selected {
-  border-color: #6366f1;
-  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.3);
+  border-color: #818cf8;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.4);
+}
+
+/* 锁定选中状态下显示手柄 */
+.custom-node.selected .react-flow__handle {
+  opacity: 1 !important;
 }
 
 .node-header {
