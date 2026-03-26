@@ -37,6 +37,27 @@ pub struct ComfyuiConfig {
     pub port: String,
 }
 
+// Canvas metadata for database storage
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct CanvasInfo {
+    pub id: String,
+    pub name: String,
+    pub thumbnail: Option<String>,
+    pub project_id: String,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+// Project metadata for database storage
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct ProjectInfoData {
+    pub id: String,
+    pub name: String,
+    pub thumbnail: Option<String>,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
 // State wrapper for database connection
 pub struct AppState {
     pub db: Mutex<Connection>,
@@ -67,6 +88,30 @@ fn init_database(conn: &Connection) -> SqliteResult<()> {
             name TEXT NOT NULL,
             host TEXT NOT NULL,
             port TEXT NOT NULL
+        )",
+        [],
+    )?;
+
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS projects (
+            id TEXT PRIMARY KEY,
+            name TEXT NOT NULL,
+            thumbnail TEXT,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL
+        )",
+        [],
+    )?;
+
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS canvases (
+            id TEXT PRIMARY KEY,
+            name TEXT NOT NULL,
+            thumbnail TEXT,
+            project_id TEXT NOT NULL,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL,
+            FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
         )",
         [],
     )?;
@@ -408,6 +453,135 @@ async fn test_llm_connection(config: LlmConfig) -> Result<String, String> {
     Err("API 响应格式无效".to_string())
 }
 
+// ==================== Projects API Commands ====================
+
+/// Get all projects
+#[tauri::command]
+fn get_projects(state: tauri::State<AppState>) -> Result<Vec<ProjectInfoData>, String> {
+    let conn = state.db.lock().map_err(|e| e.to_string())?;
+    let mut stmt = conn
+        .prepare("SELECT id, name, thumbnail, created_at, updated_at FROM projects ORDER BY updated_at DESC")
+        .map_err(|e| e.to_string())?;
+
+    let projects = stmt
+        .query_map([], |row| {
+            Ok(ProjectInfoData {
+                id: row.get(0)?,
+                name: row.get(1)?,
+                thumbnail: row.get(2)?,
+                created_at: row.get(3)?,
+                updated_at: row.get(4)?,
+            })
+        })
+        .map_err(|e| e.to_string())?
+        .filter_map(|r| r.ok())
+        .collect();
+
+    Ok(projects)
+}
+
+/// Save or update a project
+#[tauri::command]
+fn save_project_meta(project: ProjectInfoData, state: tauri::State<AppState>) -> Result<ProjectInfoData, String> {
+    let conn = state.db.lock().map_err(|e| e.to_string())?;
+
+    conn.execute(
+        "INSERT OR REPLACE INTO projects (id, name, thumbnail, created_at, updated_at)
+         VALUES (?1, ?2, ?3, ?4, ?5)",
+        params![project.id, project.name, project.thumbnail, project.created_at, project.updated_at],
+    )
+    .map_err(|e| e.to_string())?;
+
+    Ok(project)
+}
+
+/// Delete a project
+#[tauri::command]
+fn delete_project_by_id(id: String, state: tauri::State<AppState>) -> Result<String, String> {
+    let conn = state.db.lock().map_err(|e| e.to_string())?;
+    conn.execute("DELETE FROM projects WHERE id = ?1", params![id])
+        .map_err(|e| e.to_string())?;
+    Ok(format!("Project '{}' deleted", id))
+}
+
+// ==================== Canvases API Commands ====================
+
+/// Get all canvases for a project
+#[tauri::command]
+fn get_canvases_by_project(project_id: String, state: tauri::State<AppState>) -> Result<Vec<CanvasInfo>, String> {
+    let conn = state.db.lock().map_err(|e| e.to_string())?;
+    let mut stmt = conn
+        .prepare("SELECT id, name, thumbnail, project_id, created_at, updated_at FROM canvases WHERE project_id = ?1 ORDER BY updated_at DESC")
+        .map_err(|e| e.to_string())?;
+
+    let canvases = stmt
+        .query_map(params![project_id], |row| {
+            Ok(CanvasInfo {
+                id: row.get(0)?,
+                name: row.get(1)?,
+                thumbnail: row.get(2)?,
+                project_id: row.get(3)?,
+                created_at: row.get(4)?,
+                updated_at: row.get(5)?,
+            })
+        })
+        .map_err(|e| e.to_string())?
+        .filter_map(|r| r.ok())
+        .collect();
+
+    Ok(canvases)
+}
+
+/// Get all canvases (recent)
+#[tauri::command]
+fn get_all_canvases(state: tauri::State<AppState>) -> Result<Vec<CanvasInfo>, String> {
+    let conn = state.db.lock().map_err(|e| e.to_string())?;
+    let mut stmt = conn
+        .prepare("SELECT id, name, thumbnail, project_id, created_at, updated_at FROM canvases ORDER BY updated_at DESC LIMIT 20")
+        .map_err(|e| e.to_string())?;
+
+    let canvases = stmt
+        .query_map([], |row| {
+            Ok(CanvasInfo {
+                id: row.get(0)?,
+                name: row.get(1)?,
+                thumbnail: row.get(2)?,
+                project_id: row.get(3)?,
+                created_at: row.get(4)?,
+                updated_at: row.get(5)?,
+            })
+        })
+        .map_err(|e| e.to_string())?
+        .filter_map(|r| r.ok())
+        .collect();
+
+    Ok(canvases)
+}
+
+/// Save or update a canvas
+#[tauri::command]
+fn save_canvas_meta(canvas: CanvasInfo, state: tauri::State<AppState>) -> Result<CanvasInfo, String> {
+    let conn = state.db.lock().map_err(|e| e.to_string())?;
+
+    conn.execute(
+        "INSERT OR REPLACE INTO canvases (id, name, thumbnail, project_id, created_at, updated_at)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
+        params![canvas.id, canvas.name, canvas.thumbnail, canvas.project_id, canvas.created_at, canvas.updated_at],
+    )
+    .map_err(|e| e.to_string())?;
+
+    Ok(canvas)
+}
+
+/// Delete a canvas
+#[tauri::command]
+fn delete_canvas_by_id(id: String, state: tauri::State<AppState>) -> Result<String, String> {
+    let conn = state.db.lock().map_err(|e| e.to_string())?;
+    conn.execute("DELETE FROM canvases WHERE id = ?1", params![id])
+        .map_err(|e| e.to_string())?;
+    Ok(format!("Canvas '{}' deleted", id))
+}
+
 /// Test ComfyUI connection
 #[tauri::command]
 async fn test_comfyui_connection(config: ComfyuiConfig) -> Result<String, String> {
@@ -498,6 +672,14 @@ pub fn run() {
             delete_comfyui_config,
             test_llm_connection,
             test_comfyui_connection,
+            // Projects & Canvases commands
+            get_projects,
+            save_project_meta,
+            delete_project_by_id,
+            get_canvases_by_project,
+            get_all_canvases,
+            save_canvas_meta,
+            delete_canvas_by_id,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

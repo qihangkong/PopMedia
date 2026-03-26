@@ -96,3 +96,59 @@ export async function testLlmConnection(config: LlmConfig): Promise<string> {
 export async function testComfyuiConnection(config: ComfyuiConfig): Promise<string> {
   return await invoke<string>('test_comfyui_connection', { config })
 }
+
+// ==================== Projects API ====================
+
+export interface ProjectInfoData {
+  id: string
+  name: string
+  thumbnail: string | null
+  created_at: string
+  updated_at: string
+}
+
+// Get all projects
+export async function getProjects(): Promise<ProjectInfoData[]> {
+  return await invoke<ProjectInfoData[]>('get_projects')
+}
+
+// Save or update a project
+export async function saveProjectMeta(project: ProjectInfoData): Promise<ProjectInfoData> {
+  return await invoke<ProjectInfoData>('save_project_meta', { project })
+}
+
+// Delete a project
+export async function deleteProjectById(id: string): Promise<string> {
+  return await invoke<string>('delete_project_by_id', { id })
+}
+
+// ==================== Canvases API ====================
+
+export interface CanvasInfo {
+  id: string
+  name: string
+  thumbnail: string | null
+  project_id: string
+  created_at: string
+  updated_at: string
+}
+
+// Get all canvases (recent)
+export async function getAllCanvases(): Promise<CanvasInfo[]> {
+  return await invoke<CanvasInfo[]>('get_all_canvases')
+}
+
+// Get canvases by project
+export async function getCanvasesByProject(projectId: string): Promise<CanvasInfo[]> {
+  return await invoke<CanvasInfo[]>('get_canvases_by_project', { projectId })
+}
+
+// Save or update a canvas
+export async function saveCanvasMeta(canvas: CanvasInfo): Promise<CanvasInfo> {
+  return await invoke<CanvasInfo>('save_canvas_meta', { canvas })
+}
+
+// Delete a canvas
+export async function deleteCanvasById(id: string): Promise<string> {
+  return await invoke<string>('delete_canvas_by_id', { id })
+}
