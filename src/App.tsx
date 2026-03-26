@@ -22,6 +22,18 @@ import {
 import '@xyflow/react/dist/style.css'
 
 import { NodeTypeIcon } from './icons'
+import {
+  NODE_WIDTH,
+  NODE_HEIGHT,
+  NODE_MIN_WIDTH,
+  NODE_MIN_HEIGHT,
+  HANDLE_RADIUS,
+  GRID_SIZE,
+  GRID_SNAP,
+  DEFAULT_ZOOM,
+  MAX_ZOOM,
+  FIT_VIEW_PADDING,
+} from './constants'
 import Sidebar from './components/Sidebar'
 import ControlBar from './components/ControlBar'
 
@@ -56,8 +68,8 @@ const ResizeHandle = ({ nodeId, onResize }: { nodeId: string; onResize: (nodeId:
     const dx = e.clientX - startPos.current.x
     const dy = e.clientY - startPos.current.y
 
-    const newWidth = Math.max(200, startPos.current.width + dx)
-    const newHeight = Math.max(80, startPos.current.height + dy)
+    const newWidth = Math.max(NODE_MIN_WIDTH, startPos.current.width + dx)
+    const newHeight = Math.max(NODE_MIN_HEIGHT, startPos.current.height + dy)
 
     nodeRef.current.style.width = `${newWidth}px`
     nodeRef.current.style.height = `${newHeight}px`
@@ -164,8 +176,7 @@ const nodeTypes = {
   audio: AudioNode,
 }
 
-// 手柄半径（手柄宽14px的一半），用于将连线端点从手柄中心收缩到节点边框
-const HANDLE_RADIUS = 7
+// 手柄半径，用于将连线端点从手柄中心收缩到节点边框
 
 // 自定义贝塞尔边：连线端点贴合节点边框，悬停不变色，点击才选中变色
 function CustomBezierEdge({
@@ -243,9 +254,9 @@ function FlowWithControls() {
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([])
   const [showMinimap, setShowMinimap] = useState(true)
   const [snapToGrid, setSnapToGrid] = useState(false)
-  const [zoom, setZoom] = useState(1)
+  const [zoom, setZoom] = useState(DEFAULT_ZOOM)
 
-  const { zoomIn, zoomOut, fitView, getViewport, setViewport } = useReactFlow()
+  const { zoomIn, zoomOut, getViewport, setViewport } = useReactFlow()
 
   const onConnect: OnConnect = useCallback(
     (connection: Connection) => {
@@ -287,7 +298,7 @@ function FlowWithControls() {
           y: Math.random() * 200 + 100,
         },
         data: { label: `${type}节点` },
-        style: { width: 200, height: 100 },
+        style: { width: NODE_WIDTH, height: NODE_HEIGHT },
       }
       setNodes((nds) => [...nds, newNode])
     },
@@ -322,9 +333,9 @@ function FlowWithControls() {
         edgeTypes={edgeTypes}
         isValidConnection={isValidConnection}
         fitView
-        fitViewOptions={{ maxZoom: 1, padding: 0.5 }}
+        fitViewOptions={{ maxZoom: MAX_ZOOM, padding: FIT_VIEW_PADDING }}
         snapToGrid={snapToGrid}
-        snapGrid={[20, 20]}
+        snapGrid={GRID_SNAP}
         deleteKeyCode="Delete"
         zoomOnDoubleClick={false}
         proOptions={{ hideAttribution: true }}
@@ -333,8 +344,7 @@ function FlowWithControls() {
       >
         <Background
           variant={BackgroundVariant.Dots}
-          gap={20}
-          size={1}
+          gap={GRID_SIZE}
           color="rgba(255, 255, 255, 0.15)"
         />
         {showMinimap && (
@@ -358,7 +368,6 @@ function FlowWithControls() {
           zoom={zoom}
           onZoomIn={zoomIn}
           onZoomOut={zoomOut}
-          onFitView={() => fitView({ padding: 0.2 })}
           onToggleMinimap={() => setShowMinimap(!showMinimap)}
           onToggleSnapGrid={() => setSnapToGrid(!snapToGrid)}
           onSetZoom={setZoomLevel}
