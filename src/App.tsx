@@ -1,4 +1,4 @@
-import { useCallback, useState, memo } from 'react'
+import { useCallback, useState, memo, useRef, type JSX } from 'react'
 import {
   ReactFlow,
   ReactFlowProvider,
@@ -24,93 +24,155 @@ import '@xyflow/react/dist/style.css'
 import Sidebar from './components/Sidebar'
 import ControlBar from './components/ControlBar'
 
-// Custom node component
-const TextNode = memo(function TextNode({ data, selected }: { data: { label: string }; selected: boolean }) {
-  return (
-    <div
-      className={`custom-node text-node${selected ? ' selected' : ''}`}
-    >
-      <Handle type="target" position={Position.Left} id="left" className="node-handle" />
-      <div className="node-header">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-          <path d="M12 4v16"></path>
-          <path d="M4 7V5a1 1 0 0 1 1-1h14a1 1 0 0 1 1 1v2"></path>
-          <path d="M9 20h6"></path>
-        </svg>
-        <span>{data.label || '文本'}</span>
-      </div>
-      <div className="node-body">
-        <div className="placeholder-text">点击编辑文本内容</div>
-      </div>
-      <Handle type="source" position={Position.Right} id="right" className="node-handle" />
-    </div>
-  )
-})
+// 拖拽调整大小的手柄组件
+const ResizeHandle = ({ nodeId, onResize }: { nodeId: string; onResize: (nodeId: string, width: number, height: number) => void }) => {
+  const isDragging = useRef(false)
+  const startPos = useRef({ x: 0, y: 0, width: 0, height: 0 })
+  const nodeRef = useRef<HTMLDivElement | null>(null)
 
-const ImageNode = memo(function ImageNode({ data, selected }: { data: { label: string }; selected: boolean }) {
-  return (
-    <div
-      className={`custom-node image-node${selected ? ' selected' : ''}`}
-    >
-      <Handle type="target" position={Position.Left} id="left" className="node-handle" />
-      <div className="node-header">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-          <rect width="18" height="18" x="3" y="3" rx="2" ry="2"></rect>
-          <circle cx="9" cy="9" r="2"></circle>
-          <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"></path>
-        </svg>
-        <span>{data.label || '图片'}</span>
-      </div>
-      <div className="node-body">
-        <div className="placeholder-text">点击添加图片</div>
-      </div>
-      <Handle type="source" position={Position.Right} id="right" className="node-handle" />
-    </div>
-  )
-})
+  const onPointerDown = (e: React.PointerEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    e.currentTarget.setPointerCapture(e.pointerId)
 
-const VideoNode = memo(function VideoNode({ data, selected }: { data: { label: string }; selected: boolean }) {
-  return (
-    <div
-      className={`custom-node video-node${selected ? ' selected' : ''}`}
-    >
-      <Handle type="target" position={Position.Left} id="left" className="node-handle" />
-      <div className="node-header">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-          <path d="m16 13 5.223 3.482a.5.5 0 0 0 .777-.416V7.87a.5.5 0 0 0-.752-.432L16 10.5"></path>
-          <rect x="2" y="6" width="14" height="12" rx="2"></rect>
-        </svg>
-        <span>{data.label || '视频'}</span>
-      </div>
-      <div className="node-body">
-        <div className="placeholder-text">点击添加视频</div>
-      </div>
-      <Handle type="source" position={Position.Right} id="right" className="node-handle" />
-    </div>
-  )
-})
+    isDragging.current = true
 
-const AudioNode = memo(function AudioNode({ data, selected }: { data: { label: string }; selected: boolean }) {
+    const node = document.querySelector(`[data-id="${nodeId}"]`) as HTMLDivElement
+    if (node) {
+      nodeRef.current = node
+      startPos.current = {
+        x: e.clientX,
+        y: e.clientY,
+        width: node.offsetWidth,
+        height: node.offsetHeight,
+      }
+    }
+  }
+
+  const onPointerMove = (e: React.PointerEvent) => {
+    if (!isDragging.current || !nodeRef.current) return
+
+    const dx = e.clientX - startPos.current.x
+    const dy = e.clientY - startPos.current.y
+
+    const newWidth = Math.max(200, startPos.current.width + dx)
+    const newHeight = Math.max(80, startPos.current.height + dy)
+
+    nodeRef.current.style.width = `${newWidth}px`
+    nodeRef.current.style.height = `${newHeight}px`
+  }
+
+  const onPointerUp = (e: React.PointerEvent) => {
+    if (!isDragging.current || !nodeRef.current) return
+    isDragging.current = false
+
+    const newWidth = nodeRef.current.offsetWidth
+    const newHeight = nodeRef.current.offsetHeight
+    onResize(nodeId, newWidth, newHeight)
+
+    e.currentTarget.releasePointerCapture(e.pointerId)
+  }
+
   return (
     <div
-      className={`custom-node audio-node${selected ? ' selected' : ''}`}
+      className="resize-handle"
+      onPointerDown={onPointerDown}
+      onPointerMove={onPointerMove}
+      onPointerUp={onPointerUp}
     >
-      <Handle type="target" position={Position.Left} id="left" className="node-handle" />
-      <div className="node-header">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-          <path d="M9 18V5l12-2v13"></path>
-          <circle cx="6" cy="18" r="3"></circle>
-          <circle cx="18" cy="16" r="3"></circle>
-        </svg>
-        <span>{data.label || '音频'}</span>
-      </div>
-      <div className="node-body">
-        <div className="placeholder-text">点击添加音频</div>
-      </div>
-      <Handle type="source" position={Position.Right} id="right" className="node-handle" />
+      <svg width="10" height="10" viewBox="0 0 10 10">
+        <path d="M9 1L1 9M9 5L5 9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" fill="none"/>
+      </svg>
     </div>
   )
-})
+}
+
+// 节点类型映射
+const nodeIcons: Record<string, JSX.Element> = {
+  text: (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <path d="M12 4v16"></path>
+      <path d="M4 7V5a1 1 0 0 1 1-1h14a1 1 0 0 1 1 1v2"></path>
+      <path d="M9 20h6"></path>
+    </svg>
+  ),
+  image: (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <rect width="18" height="18" x="3" y="3" rx="2" ry="2"></rect>
+      <circle cx="9" cy="9" r="2"></circle>
+      <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"></path>
+    </svg>
+  ),
+  video: (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <path d="m16 13 5.223 3.482a.5.5 0 0 0 .777-.416V7.87a.5.5 0 0 0-.752-.432L16 10.5"></path>
+      <rect x="2" y="6" width="14" height="12" rx="2"></rect>
+    </svg>
+  ),
+  audio: (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <path d="M9 18V5l12-2v13"></path>
+      <circle cx="6" cy="18" r="3"></circle>
+      <circle cx="18" cy="16" r="3"></circle>
+    </svg>
+  ),
+}
+
+const nodeLabels: Record<string, string> = {
+  text: '文本',
+  image: '图片',
+  video: '视频',
+  audio: '音频',
+}
+
+// 节点工厂函数
+function createNodeComponent(type: string) {
+  const NodeComponent = memo(function NodeComponent({ data, selected, id }: { data: { label: string }; selected: boolean; id: string }) {
+    const { setNodes } = useReactFlow()
+    const onResize = useCallback((nodeId: string, width: number, height: number) => {
+      setNodes((nds) =>
+        nds.map((node) => {
+          if (node.id === nodeId) {
+            return {
+              ...node,
+              style: {
+                ...node.style,
+                width,
+                height,
+              },
+            }
+          }
+          return node
+        })
+      )
+    }, [setNodes])
+
+    return (
+      <div
+        className={`custom-node ${type}-node${selected ? ' selected' : ''}`}
+        data-id={id}
+        style={{ width: '100%', height: '100%' }}
+      >
+        <Handle type="target" position={Position.Left} id="left" className="node-handle" />
+        <div className="node-header">
+          {nodeIcons[type]}
+          <span>{data.label || nodeLabels[type]}</span>
+        </div>
+        <div className="node-body">
+          <div className="placeholder-text">点击{type === 'text' ? '编辑' : '添加'}{nodeLabels[type]}</div>
+        </div>
+        <Handle type="source" position={Position.Right} id="right" className="node-handle" />
+        <ResizeHandle nodeId={id} onResize={onResize} />
+      </div>
+    )
+  })
+  return NodeComponent
+}
+
+const TextNode = createNodeComponent('text')
+const ImageNode = createNodeComponent('image')
+const VideoNode = createNodeComponent('video')
+const AudioNode = createNodeComponent('audio')
 
 const nodeTypes = {
   text: TextNode,
@@ -242,6 +304,7 @@ function FlowWithControls() {
           y: Math.random() * 200 + 100,
         },
         data: { label: `${type}节点` },
+        style: { width: 200, height: 100 },
       }
       setNodes((nds) => [...nds, newNode])
     },

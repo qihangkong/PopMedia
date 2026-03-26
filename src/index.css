@@ -203,7 +203,8 @@ body {
   background: rgba(30, 30, 30, 0.95);
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 12px;
-  min-width: 200px;
+  width: 200px;
+  height: 100px;
   overflow: hidden;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
@@ -293,6 +294,44 @@ body {
 .react-flow__connection-line {
   stroke: #6366f1;
   stroke-width: 2;
+}
+
+/* 节点右下角拖拽调整大小手柄 - 与连接手柄显示逻辑一致 */
+.resize-handle {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 14px;
+  height: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: se-resize;
+  /* 与连接手柄一致的隐藏规则 */
+  opacity: 0 !important;
+  transition: all 0.15s ease !important;
+  z-index: 10;
+  /* 阻止 React Flow 的节点拖拽事件 */
+  touch-action: none;
+}
+
+/* 鼠标悬停在节点上时显示手柄 */
+.custom-node:hover .resize-handle {
+  opacity: 1 !important;
+}
+
+/* 节点选中时显示手柄 - 与连接手柄一致 */
+.custom-node.selected .resize-handle {
+  opacity: 1 !important;
+}
+
+/* 手柄悬停效果 - 改变图标颜色 */
+.resize-handle:hover {
+  color: #818cf8 !important;
+}
+
+.resize-handle svg {
+  pointer-events: none;
 }
 
 /* React Flow edge - 禁用悬停变色，只有点击选中才变色 */
