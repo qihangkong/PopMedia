@@ -131,10 +131,12 @@ function BaseNode({ data, selected, id }: { data: { label: string; type: string 
           className={`node-label-input ${type}-label-input`}
           defaultValue={data.label || meta?.label}
           onBlur={(e) => {
+            const newLabel = e.target.value
+            if (newLabel === data.label) return
             setNodes((nds) =>
               nds.map((node) => {
                 if (node.id === id) {
-                  return { ...node, data: { ...node.data, label: e.target.value } }
+                  return { ...node, data: { ...node.data, label: newLabel } }
                 }
                 return node
               })
