@@ -212,6 +212,8 @@ body {
   /* 尺寸由 JS style prop 控制 */
   width: 200px;
   height: 100px;
+  /* 手柄过渡效果跟随节点 */
+  transition: border-color 0.15s ease;
 }
 
 .custom-node:hover {
@@ -278,14 +280,28 @@ body {
 }
 
 /* ============================================================
-   React Flow Handle — 手柄尺寸/颜色/位置由 JS inline style 设置，
-   这里只处理需要组合选择器的可见性规则
+   React Flow Handle
    ============================================================ */
 
-/* 节点悬停 / 选中时显示手柄 — 组合选择器特异性高于 react-flow 默认 */
+/* 默认隐藏，由 JS inline style 控制尺寸/边框/背景色 */
+.react-flow__handle {
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+/* 节点悬停 / 选中时显示手柄 */
 .custom-node:hover .react-flow__handle,
 .custom-node.selected .react-flow__handle {
   opacity: 1;
+}
+
+/* React Flow v12 用 class 定位手柄，修正左右手柄位置 */
+.react-flow__handle-left {
+  left: -7px;
+}
+
+.react-flow__handle-right {
+  right: -7px;
 }
 
 /* ============================================================
