@@ -43,7 +43,7 @@ pub struct CanvasInfo {
     pub id: String,
     pub name: String,
     pub thumbnail: Option<String>,
-    pub project_id: String,
+    pub project_id: Option<String>,
     pub created_at: String,
     pub updated_at: String,
 }
@@ -71,51 +71,8 @@ fn get_db_path() -> PathBuf {
 }
 
 fn init_database(conn: &Connection) -> SqliteResult<()> {
-    conn.execute(
-        "CREATE TABLE IF NOT EXISTS llm_configs (
-            id TEXT PRIMARY KEY,
-            name TEXT NOT NULL,
-            api_url TEXT NOT NULL,
-            api_key TEXT NOT NULL,
-            model_name TEXT NOT NULL
-        )",
-        [],
-    )?;
-
-    conn.execute(
-        "CREATE TABLE IF NOT EXISTS comfyui_configs (
-            id TEXT PRIMARY KEY,
-            name TEXT NOT NULL,
-            host TEXT NOT NULL,
-            port TEXT NOT NULL
-        )",
-        [],
-    )?;
-
-    conn.execute(
-        "CREATE TABLE IF NOT EXISTS projects (
-            id TEXT PRIMARY KEY,
-            name TEXT NOT NULL,
-            thumbnail TEXT,
-            created_at TEXT NOT NULL,
-            updated_at TEXT NOT NULL
-        )",
-        [],
-    )?;
-
-    conn.execute(
-        "CREATE TABLE IF NOT EXISTS canvases (
-            id TEXT PRIMARY KEY,
-            name TEXT NOT NULL,
-            thumbnail TEXT,
-            project_id TEXT NOT NULL,
-            created_at TEXT NOT NULL,
-            updated_at TEXT NOT NULL,
-            FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
-        )",
-        [],
-    )?;
-
+    let migration_sql = include_str!("../migrations/001_initial.sql");
+    conn.execute_batch(migration_sql)?;
     Ok(())
 }
 
@@ -582,6 +539,81 @@ fn delete_canvas_by_id(id: String, state: tauri::State<AppState>) -> Result<Stri
     Ok(format!("Canvas '{}' deleted", id))
 }
 
+// ==================== Canvas Data Commands ====================
+
+/// Canvas data structure for JSON file
+#[derive(Debug, Serialize, Deserialize)]
+pub struct CanvasData {
+    pub nodes: serde_json::Value,
+    pub edges: serde_json::Value,
+    pub viewport: Option<serde_json::Value>,
+}
+
+/// Save canvas data to file
+#[tauri::command]
+fn save_canvas_data(id: String, data: CanvasData) -> Result<String, String> {
+    let app_data = dirs::data_local_dir()
+        .ok_or("Failed to get app data directory")?
+        .join("PopMedia")
+        .join("canvases");
+
+    fs::create_dir_all(&app_data).map_err(|e| e.to_string())?;
+
+    let file_path = app_data.join(format!("{}.json", id));
+    let json = serde_json::to_string_pretty(&data).map_err(|e| e.to_string())?;
+    fs::write(&file_path, json).map_err(|e| e.to_string())?;
+
+    Ok(format!("Canvas '{}' saved successfully", id))
+}
+
+/// Load canvas data from file
+#[tauri::command]
+fn load_canvas_data(id: String) -> Result<CanvasData, String> {
+    let app_data = dirs::data_local_dir()
+        .ok_or("Failed to get app data directory")?
+        .join("PopMedia")
+        .join("canvases");
+
+    let file_path = app_data.join(format!("{}.json", id));
+    let content = fs::read_to_string(&file_path).map_err(|e| format!("Failed to load canvas: {}", e))?;
+    let data: CanvasData = serde_json::from_str(&content).map_err(|e| format!("Failed to parse canvas: {}", e))?;
+
+    Ok(data)
+}
+
+/// Upload media file and return local path
+#[tauri::command]
+async fn upload_media(url: String, filename: String) -> Result<String, String> {
+    let app_data = dirs::data_local_dir()
+        .ok_or("Failed to get app data directory")?
+        .join("PopMedia")
+        .join("uploads");
+
+    fs::create_dir_all(&app_data).map_err(|e| e.to_string())?;
+
+    let ext = filename.rsplit('.').next().unwrap_or("bin");
+    let local_filename = format!("{}.{}", uuid::Uuid::new_v4(), ext);
+    let local_path = app_data.join(&local_filename);
+
+    // Download from URL
+    let client = reqwest::Client::new();
+    let response = client
+        .get(&url)
+        .timeout(std::time::Duration::from_secs(30))
+        .send()
+        .await
+        .map_err(|e| format!("Download failed: {}", e))?;
+
+    if !response.status().is_success() {
+        return Err(format!("Download failed with status: {}", response.status()));
+    }
+
+    let bytes = response.bytes().await.map_err(|e| format!("Read failed: {}", e))?;
+    fs::write(&local_path, &bytes).map_err(|e| format!("Write failed: {}", e))?;
+
+    Ok(format!("uploads/{}", local_filename))
+}
+
 /// Test ComfyUI connection
 #[tauri::command]
 async fn test_comfyui_connection(config: ComfyuiConfig) -> Result<String, String> {
@@ -680,6 +712,10 @@ pub fn run() {
             get_all_canvases,
             save_canvas_meta,
             delete_canvas_by_id,
+            // Canvas data commands
+            save_canvas_data,
+            load_canvas_data,
+            upload_media,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

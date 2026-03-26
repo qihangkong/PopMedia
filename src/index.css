@@ -1606,3 +1606,22 @@ body {
   font-size: 14px;
   font-weight: 500;
 }
+
+/* ============================================================
+   Canvas Loading
+   ============================================================ */
+
+.canvas-loading {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(26, 26, 26, 0.9);
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 14px;
+}

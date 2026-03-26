@@ -128,7 +128,7 @@ export interface CanvasInfo {
   id: string
   name: string
   thumbnail: string | null
-  project_id: string
+  project_id: string | null
   created_at: string
   updated_at: string
 }
@@ -151,4 +151,27 @@ export async function saveCanvasMeta(canvas: CanvasInfo): Promise<CanvasInfo> {
 // Delete a canvas
 export async function deleteCanvasById(id: string): Promise<string> {
   return await invoke<string>('delete_canvas_by_id', { id })
+}
+
+// ==================== Canvas Data Commands ====================
+
+export interface CanvasData {
+  nodes: unknown[]
+  edges: unknown[]
+  viewport?: unknown
+}
+
+// Save canvas data (nodes, edges, viewport)
+export async function saveCanvasData(id: string, data: CanvasData): Promise<string> {
+  return await invoke<string>('save_canvas_data', { id, data })
+}
+
+// Load canvas data
+export async function loadCanvasData(id: string): Promise<CanvasData> {
+  return await invoke<CanvasData>('load_canvas_data', { id })
+}
+
+// Upload media from URL and return local path
+export async function uploadMedia(url: string, filename: string): Promise<string> {
+  return await invoke<string>('upload_media', { url, filename })
 }

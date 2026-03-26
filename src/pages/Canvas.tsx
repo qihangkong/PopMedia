@@ -1,4 +1,5 @@
 import { useCallback, useState, memo, useRef, useEffect } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import {
   ReactFlow,
   Background,
@@ -38,6 +39,16 @@ import {
   MAX_ZOOM,
   FIT_VIEW_PADDING,
 } from '../constants'
+import { saveCanvasData, loadCanvasData, saveCanvasMeta } from '../utils/tauriApi'
+
+// 生成UUID
+function generateUUID(): string {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+    const r = Math.random() * 16 | 0
+    const v = c === 'x' ? r : (r & 0x3 | 0x8)
+    return v.toString(16)
+  })
+}
 
 // 拖拽调整大小的手柄组件
 const ResizeHandle = ({ nodeId, onResize }: { nodeId: string; onResize: (nodeId: string, width: number, height: number) => void }) => {
@@ -617,17 +628,24 @@ const edgeTypes = {
 }
 
 export default function Canvas() {
-  const [nodes, setNodes, onNodesChange] = useNodesState<Node>([])
-  const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([])
-  const [showMinimap, setShowMinimap] = useState(true)
-  const [snapToGrid, setSnapToGrid] = useState(false)
-  const [zoom, setZoom] = useState(DEFAULT_ZOOM)
+  const [searchParams] = useSearchParams()
+  const [canvasId, setCanvasId] = useState<string>('')
   const [canvasName, setCanvasName] = useState('未命名的画布')
   const [contextMenu, setContextMenu] = useState<{ nodeId: string; nodeType: string; x: number; y: number } | null>(null)
   const [previewImage, setPreviewImage] = useState<string | null>(null)
   const [previewVideo, setPreviewVideo] = useState<string | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
+  const [showMinimap, setShowMinimap] = useState(true)
+  const [snapToGrid, setSnapToGrid] = useState(false)
+  const [zoom, setZoom] = useState(DEFAULT_ZOOM)
+
+  const [nodes, setNodes, onNodesChange] = useNodesState<Node>([])
+  const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([])
 
   const { zoomIn, zoomOut, getViewport, setViewport } = useReactFlow()
+
+  const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const isInitializedRef = useRef(false)
 
   const onConnect: OnConnect = useCallback(
     (connection: Connection) => {
@@ -726,8 +744,103 @@ export default function Canvas() {
     []
   )
 
+  // 保存画布数据
+  const saveCanvas = useCallback(async () => {
+    if (!canvasId || !isInitializedRef.current) return
+    try {
+      const viewport = getViewport()
+      await saveCanvasData(canvasId, {
+        nodes,
+        edges,
+        viewport,
+      })
+      // 更新元数据
+      await saveCanvasMeta({
+        id: canvasId,
+        name: canvasName,
+        thumbnail: null,
+        project_id: null,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      })
+      console.log('[Canvas] Saved:', canvasId)
+    } catch (err) {
+      console.error('[Canvas] Save failed:', err)
+    }
+  }, [canvasId, canvasName, nodes, edges, getViewport])
+
+  // 加载画布数据
+  const loadCanvas = useCallback(async (id: string) => {
+    try {
+      const data = await loadCanvasData(id)
+      if (data.nodes && Array.isArray(data.nodes)) {
+        setNodes(data.nodes as Node[])
+      }
+      if (data.edges && Array.isArray(data.edges)) {
+        setEdges(data.edges as Edge[])
+      }
+      if (data.viewport) {
+        setViewport(data.viewport as Viewport)
+      }
+      console.log('[Canvas] Loaded:', id)
+    } catch (err) {
+      console.log('[Canvas] No existing data or load failed, starting fresh')
+    }
+  }, [setNodes, setEdges, setViewport])
+
+  // 初始化画布ID
+  useEffect(() => {
+    const initCanvas = async () => {
+      const idFromUrl = searchParams.get('id')
+      if (idFromUrl) {
+        setCanvasId(idFromUrl)
+        await loadCanvas(idFromUrl)
+        isInitializedRef.current = true
+        setIsLoading(false)
+      } else {
+        const newId = generateUUID()
+        setCanvasId(newId)
+        isInitializedRef.current = true
+        setIsLoading(false)
+        // 更新URL
+        const newUrl = `${window.location.pathname}?id=${newId}`
+        window.history.replaceState({}, '', newUrl)
+      }
+    }
+    initCanvas()
+  }, [searchParams])
+
+  // 自动保存（防抖）
+  useEffect(() => {
+    if (!isInitializedRef.current || isLoading) return
+
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current)
+    }
+    saveTimeoutRef.current = setTimeout(() => {
+      saveCanvas()
+    }, 1000)
+
+    return () => {
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current)
+      }
+    }
+  }, [nodes, edges, canvasName, saveCanvas, isLoading])
+
+  // 监听画布名称变化时保存
+  useEffect(() => {
+    if (!isInitializedRef.current || isLoading) return
+    saveCanvas()
+  }, [canvasName])
+
   return (
     <div className="page-container">
+      {isLoading && (
+        <div className="canvas-loading">
+          <span>加载中...</span>
+        </div>
+      )}
       <HeaderBar
         canvasName={canvasName}
         onCanvasNameChange={setCanvasName}
