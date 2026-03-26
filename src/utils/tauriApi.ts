@@ -86,3 +86,13 @@ export async function saveComfyuiConfig(config: ComfyuiConfig): Promise<ComfyuiC
 export async function deleteComfyuiConfig(id: string): Promise<string> {
   return await invoke<string>('delete_comfyui_config', { id })
 }
+
+// Test LLM connection
+export async function testLlmConnection(config: LlmConfig): Promise<string> {
+  return await invoke<string>('test_llm_connection', { config })
+}
+
+// Test ComfyUI connection
+export async function testComfyuiConnection(config: ComfyuiConfig): Promise<string> {
+  return await invoke<string>('test_comfyui_connection', { config })
+}

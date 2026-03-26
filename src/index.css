@@ -1220,7 +1220,8 @@ body {
   color: #34d399;
 }
 
-.test-connection-btn.error {
+.test-connection-btn.error,
+.test-connection-btn.failed {
   background: rgba(248, 113, 113, 0.15);
   border-color: rgba(248, 113, 113, 0.4);
   color: #f87171;
@@ -1253,7 +1254,8 @@ body {
   background: #34d399;
 }
 
-.status-indicator.error {
+.status-indicator.error,
+.status-indicator.failed {
   background: #f87171;
 }
 

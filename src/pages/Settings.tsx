@@ -9,7 +9,21 @@ import {
   getComfyuiConfigs,
   saveComfyuiConfig,
   deleteComfyuiConfig,
+  testLlmConnection,
+  testComfyuiConnection,
 } from '../utils/tauriApi'
+
+type ConnectionStatus = 'untested' | 'testing' | 'success' | 'failed'
+
+interface LlmConfigWithStatus extends LlmConfig {
+  connectionStatus: ConnectionStatus
+  connectionMessage?: string
+}
+
+interface ComfyuiConfigWithStatus extends ComfyuiConfig {
+  connectionStatus: ConnectionStatus
+  connectionMessage?: string
+}
 
 // Brain icon for LLM section
 const BrainIcon = () => (
@@ -93,8 +107,8 @@ const ServerIcon = () => (
 )
 
 export default function Settings() {
-  const [llmConfigs, setLlmConfigs] = useState<LlmConfig[]>([])
-  const [comfyuiConfigs, setComfyuiConfigs] = useState<ComfyuiConfig[]>([])
+  const [llmConfigs, setLlmConfigs] = useState<LlmConfigWithStatus[]>([])
+  const [comfyuiConfigs, setComfyuiConfigs] = useState<ComfyuiConfigWithStatus[]>([])
   const [editingId, setEditingId] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
 
@@ -110,8 +124,8 @@ export default function Settings() {
         getLlmConfigs(),
         getComfyuiConfigs(),
       ])
-      setLlmConfigs(llms)
-      setComfyuiConfigs(comfyuis)
+      setLlmConfigs(llms.map(config => ({ ...config, connectionStatus: 'untested' as ConnectionStatus })))
+      setComfyuiConfigs(comfyuis.map(config => ({ ...config, connectionStatus: 'untested' as ConnectionStatus })))
     } catch (error) {
       console.error('Failed to load configs:', error)
     } finally {
@@ -120,12 +134,13 @@ export default function Settings() {
   }
 
   const handleAddLLM = async () => {
-    const newConfig: LlmConfig = {
+    const newConfig: LlmConfigWithStatus = {
       id: crypto.randomUUID(),
       name: '新的大语言模型',
       api_url: '',
       api_key: '',
       model_name: '',
+      connectionStatus: 'untested',
     }
     try {
       await saveLlmConfig(newConfig)
@@ -137,11 +152,12 @@ export default function Settings() {
   }
 
   const handleAddComfyUI = async () => {
-    const newConfig: ComfyuiConfig = {
+    const newConfig: ComfyuiConfigWithStatus = {
       id: crypto.randomUUID(),
       name: '新的ComfyUI配置',
       host: '127.0.0.1',
       port: '8188',
+      connectionStatus: 'untested',
     }
     try {
       await saveComfyuiConfig(newConfig)
@@ -182,7 +198,7 @@ export default function Settings() {
     const config = llmConfigs.find(c => c.id === id)
     if (!config) return
 
-    const updatedConfig = { ...config, [field]: value }
+    const updatedConfig = { ...config, [field]: value, connectionStatus: 'untested' as ConnectionStatus }
     setLlmConfigs(llmConfigs.map(c => c.id === id ? updatedConfig : c))
 
     try {
@@ -196,7 +212,7 @@ export default function Settings() {
     const config = comfyuiConfigs.find(c => c.id === id)
     if (!config) return
 
-    const updatedConfig = { ...config, [field]: value }
+    const updatedConfig = { ...config, [field]: value, connectionStatus: 'untested' as ConnectionStatus }
     setComfyuiConfigs(comfyuiConfigs.map(c => c.id === id ? updatedConfig : c))
 
     try {
@@ -207,22 +223,47 @@ export default function Settings() {
   }
 
   const handleTestConnection = async (type: 'llm' | 'comfyui', id: string) => {
-    // Update status to testing
     if (type === 'llm') {
-      setLlmConfigs(llmConfigs.map(config =>
-        config.id === id ? { ...config } : config
+      const config = llmConfigs.find(c => c.id === id)
+      if (!config) return
+
+      // Update status to testing
+      setLlmConfigs(llmConfigs.map(c =>
+        c.id === id ? { ...c, connectionStatus: 'testing' as ConnectionStatus, connectionMessage: undefined } : c
       ))
+
+      try {
+        const result = await testLlmConnection(config)
+        setLlmConfigs(llmConfigs.map(c =>
+          c.id === id ? { ...c, connectionStatus: 'success' as ConnectionStatus, connectionMessage: result } : c
+        ))
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : String(error)
+        setLlmConfigs(llmConfigs.map(c =>
+          c.id === id ? { ...c, connectionStatus: 'failed' as ConnectionStatus, connectionMessage: errorMessage } : c
+        ))
+      }
     } else {
-      setComfyuiConfigs(comfyuiConfigs.map(config =>
-        config.id === id ? { ...config } : config
+      const config = comfyuiConfigs.find(c => c.id === id)
+      if (!config) return
+
+      // Update status to testing
+      setComfyuiConfigs(comfyuiConfigs.map(c =>
+        c.id === id ? { ...c, connectionStatus: 'testing' as ConnectionStatus, connectionMessage: undefined } : c
       ))
+
+      try {
+        const result = await testComfyuiConnection(config)
+        setComfyuiConfigs(comfyuiConfigs.map(c =>
+          c.id === id ? { ...c, connectionStatus: 'success' as ConnectionStatus, connectionMessage: result } : c
+        ))
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : String(error)
+        setComfyuiConfigs(comfyuiConfigs.map(c =>
+          c.id === id ? { ...c, connectionStatus: 'failed' as ConnectionStatus, connectionMessage: errorMessage } : c
+        ))
+      }
     }
-
-    // Simulate API test
-    await new Promise(resolve => setTimeout(resolve, 1500))
-
-    // For now, just show as untested (real API test would go here)
-    console.log(`Connection test for ${type} config ${id} completed`)
   }
 
   if (loading) {
@@ -284,11 +325,12 @@ export default function Settings() {
                       />
                       <div className="model-card-actions-inline">
                         <button
-                          className="test-connection-btn untested"
+                          className={`test-connection-btn ${config.connectionStatus}`}
                           onClick={() => handleTestConnection('llm', config.id)}
+                          disabled={config.connectionStatus === 'testing'}
                         >
-                          <span className="status-indicator untested"></span>
-                          连接测试
+                          <span className={`status-indicator ${config.connectionStatus}`}></span>
+                          {config.connectionStatus === 'testing' ? '测试中...' : config.connectionStatus === 'success' ? '连接成功' : config.connectionStatus === 'failed' ? '连接失败' : '连接测试'}
                         </button>
                         <button
                           className="edit-action-btn"
@@ -379,11 +421,12 @@ export default function Settings() {
                       />
                       <div className="model-card-actions-inline">
                         <button
-                          className="test-connection-btn untested"
+                          className={`test-connection-btn ${config.connectionStatus}`}
                           onClick={() => handleTestConnection('comfyui', config.id)}
+                          disabled={config.connectionStatus === 'testing'}
                         >
-                          <span className="status-indicator untested"></span>
-                          连接测试
+                          <span className={`status-indicator ${config.connectionStatus}`}></span>
+                          {config.connectionStatus === 'testing' ? '测试中...' : config.connectionStatus === 'success' ? '连接成功' : config.connectionStatus === 'failed' ? '连接失败' : '连接测试'}
                         </button>
                         <button
                           className="edit-action-btn"
