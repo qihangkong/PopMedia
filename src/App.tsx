@@ -103,7 +103,7 @@ const ResizeHandle = ({ nodeId, onResize }: { nodeId: string; onResize: (nodeId:
 }
 
 // 通用节点组件 — 所有类型共用，根据 type prop 渲染不同样式
-function BaseNode({ data, selected, id }: { data: { label: string; type: string; content?: string; imageUrl?: string }; selected: boolean; id: string }) {
+function BaseNode({ data, selected, id }: { data: { label: string; type: string; content?: string; imageUrl?: string; videoUrl?: string; audioUrl?: string }; selected: boolean; id: string }) {
   const { setNodes } = useReactFlow()
   const type = data.type || 'text'
   const meta = NODE_TYPE_MAP[type]
@@ -122,8 +122,12 @@ function BaseNode({ data, selected, id }: { data: { label: string; type: string;
 
   const isTextNode = type === 'text'
   const isImageNode = type === 'image'
+  const isVideoNode = type === 'video'
+  const isAudioNode = type === 'audio'
   const textareaRef = useRef<HTMLTextAreaElement>(null)
-  const fileInputRef = useRef<HTMLInputElement>(null)
+  const imageFileInputRef = useRef<HTMLInputElement>(null)
+  const videoFileInputRef = useRef<HTMLInputElement>(null)
+  const audioFileInputRef = useRef<HTMLInputElement>(null)
 
   // 在 window 级别拦截 pointerdown/mousedown，判断 target 是否在 textarea 内，阻止冒泡以防触发节点拖拽
   useEffect(() => {
@@ -169,6 +173,34 @@ function BaseNode({ data, selected, id }: { data: { label: string; type: string;
     [setNodes, id]
   )
 
+  const updateVideoUrl = useCallback(
+    (newVideoUrl: string) => {
+      setNodes((nds) =>
+        nds.map((node) => {
+          if (node.id === id) {
+            return { ...node, data: { ...node.data, videoUrl: newVideoUrl } }
+          }
+          return node
+        })
+      )
+    },
+    [setNodes, id]
+  )
+
+  const updateAudioUrl = useCallback(
+    (newAudioUrl: string) => {
+      setNodes((nds) =>
+        nds.map((node) => {
+          if (node.id === id) {
+            return { ...node, data: { ...node.data, audioUrl: newAudioUrl } }
+          }
+          return node
+        })
+      )
+    },
+    [setNodes, id]
+  )
+
   // 处理图片上传
   const handleImageUpload = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -181,10 +213,35 @@ function BaseNode({ data, selected, id }: { data: { label: string; type: string;
         }
         reader.readAsDataURL(file)
       }
-      // 清空 input，允许重复选择同一文件
       e.target.value = ''
     },
     [updateImageUrl]
+  )
+
+  // 处理视频上传（使用 blob URL 避免 base64 性能问题）
+  const handleVideoUpload = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0]
+      if (file) {
+        const blobUrl = URL.createObjectURL(file)
+        updateVideoUrl(blobUrl)
+      }
+      e.target.value = ''
+    },
+    [updateVideoUrl]
+  )
+
+  // 处理音频上传（使用 blob URL 避免 base64 性能问题）
+  const handleAudioUpload = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0]
+      if (file) {
+        const blobUrl = URL.createObjectURL(file)
+        updateAudioUrl(blobUrl)
+      }
+      e.target.value = ''
+    },
+    [updateAudioUrl]
   )
 
   return (
@@ -195,7 +252,6 @@ function BaseNode({ data, selected, id }: { data: { label: string; type: string;
         style={{ width: '100%', height: '100%' }}
         onContextMenu={(e) => {
           e.preventDefault()
-          // 通过自定义事件传递上下文菜单请求
           const event = new CustomEvent('nodeContextMenu', {
             detail: { nodeId: id, nodeType: type, x: e.clientX, y: e.clientY },
             bubbles: true,
@@ -275,7 +331,7 @@ function BaseNode({ data, selected, id }: { data: { label: string; type: string;
             ) : (
               <div
                 className="placeholder-text image-placeholder"
-                onClick={() => fileInputRef.current?.click()}
+                onClick={() => imageFileInputRef.current?.click()}
               >
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
                   <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
@@ -283,6 +339,68 @@ function BaseNode({ data, selected, id }: { data: { label: string; type: string;
                   <polyline points="21 15 16 10 5 21" />
                 </svg>
                 <span>点击上传图片</span>
+              </div>
+            )
+          ) : isVideoNode ? (
+            data.videoUrl ? (
+              <div className="video-preview-wrapper">
+                <video
+                  src={data.videoUrl}
+                  className="node-media-preview"
+                  preload="metadata"
+                  controls
+                />
+                <button
+                  className="video-preview-btn"
+                  title="全屏预览视频"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    const event = new CustomEvent('previewVideo', {
+                      detail: { videoUrl: data.videoUrl },
+                      bubbles: true,
+                    })
+                    e.currentTarget.dispatchEvent(event)
+                  }}
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                    <circle cx="12" cy="12" r="3" />
+                  </svg>
+                </button>
+              </div>
+            ) : (
+              <div
+                className="placeholder-text media-placeholder"
+                onClick={() => videoFileInputRef.current?.click()}
+              >
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                  <polygon points="23 7 16 12 23 17 23 7" />
+                  <rect x="1" y="5" width="15" height="14" rx="2" ry="2" />
+                </svg>
+                <span>点击上传视频</span>
+              </div>
+            )
+          ) : isAudioNode ? (
+            data.audioUrl ? (
+              <div className="audio-preview-wrapper">
+                <audio
+                  src={data.audioUrl}
+                  controls
+                  className="node-media-preview"
+                  preload="metadata"
+                />
+              </div>
+            ) : (
+              <div
+                className="placeholder-text media-placeholder"
+                onClick={() => audioFileInputRef.current?.click()}
+              >
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                  <path d="M9 18V5l12-2v13" />
+                  <circle cx="6" cy="18" r="3" />
+                  <circle cx="18" cy="16" r="3" />
+                </svg>
+                <span>点击上传音频</span>
               </div>
             )
           ) : (
@@ -297,7 +415,7 @@ function BaseNode({ data, selected, id }: { data: { label: string; type: string;
               title="上传图片"
               onClick={(e) => {
                 e.stopPropagation()
-                fileInputRef.current?.click()
+                imageFileInputRef.current?.click()
               }}
             >
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -319,15 +437,93 @@ function BaseNode({ data, selected, id }: { data: { label: string; type: string;
               </svg>
             </button>
           )}
+          {isVideoNode && (
+            <button
+              className="node-action-btn"
+              title="上传视频"
+              onClick={(e) => {
+                e.stopPropagation()
+                videoFileInputRef.current?.click()
+              }}
+            >
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12" />
+              </svg>
+            </button>
+          )}
+          {isVideoNode && data.videoUrl && (
+            <button
+              className="node-action-btn delete-btn"
+              title="删除视频"
+              onClick={(e) => {
+                e.stopPropagation()
+                if (data.videoUrl) URL.revokeObjectURL(data.videoUrl)
+                updateVideoUrl('')
+              }}
+            >
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M18 6L6 18M6 6l12 12" />
+              </svg>
+            </button>
+          )}
+          {isAudioNode && (
+            <button
+              className="node-action-btn"
+              title="上传音频"
+              onClick={(e) => {
+                e.stopPropagation()
+                audioFileInputRef.current?.click()
+              }}
+            >
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12" />
+              </svg>
+            </button>
+          )}
+          {isAudioNode && data.audioUrl && (
+            <button
+              className="node-action-btn delete-btn"
+              title="删除音频"
+              onClick={(e) => {
+                e.stopPropagation()
+                if (data.audioUrl) URL.revokeObjectURL(data.audioUrl)
+                updateAudioUrl('')
+              }}
+            >
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M18 6L6 18M6 6l12 12" />
+              </svg>
+            </button>
+          )}
         </div>
         {/* 隐藏的文件输入 */}
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept="image/*"
-          style={{ display: 'none' }}
-          onChange={handleImageUpload}
-        />
+        {isImageNode && (
+          <input
+            ref={imageFileInputRef}
+            type="file"
+            accept="image/*"
+            style={{ display: 'none' }}
+            onChange={handleImageUpload}
+          />
+        )}
+        {isVideoNode && (
+          <input
+            ref={videoFileInputRef}
+            type="file"
+            accept="video/*"
+            style={{ display: 'none' }}
+            onChange={handleVideoUpload}
+          />
+        )}
+        {isAudioNode && (
+          <input
+            ref={audioFileInputRef}
+            type="file"
+            accept="audio/*"
+            style={{ display: 'none' }}
+            onChange={handleAudioUpload}
+          />
+        )}
         <Handle
           type="source"
           position={Position.Right}
@@ -438,6 +634,8 @@ function FlowWithControls() {
   const [contextMenu, setContextMenu] = useState<{ nodeId: string; nodeType: string; x: number; y: number } | null>(null)
   // 图片预览弹窗
   const [previewImage, setPreviewImage] = useState<string | null>(null)
+  // 视频预览弹窗
+  const [previewVideo, setPreviewVideo] = useState<string | null>(null)
 
   const { zoomIn, zoomOut, getViewport, setViewport } = useReactFlow()
 
@@ -473,6 +671,11 @@ function FlowWithControls() {
 
   const addNode = useCallback(
     (type: string) => {
+      const mediaData: Record<string, unknown> = {}
+      if (type === 'text') mediaData.content = ''
+      if (type === 'image') mediaData.imageUrl = ''
+      if (type === 'video') mediaData.videoUrl = ''
+      if (type === 'audio') mediaData.audioUrl = ''
       const newNode: Node = {
         id: `${Date.now()}`,
         type: type,
@@ -480,7 +683,7 @@ function FlowWithControls() {
           x: Math.random() * 300 + 100,
           y: Math.random() * 200 + 100,
         },
-        data: { label: type === 'text' ? '文本节点' : `${type}节点`, type, ...(type === 'text' ? { content: '' } : {}) },
+        data: { label: type === 'text' ? '文本节点' : `${type}节点`, type, ...mediaData },
         style: { width: NODE_WIDTH, height: NODE_HEIGHT },
       }
       setNodes((nds) => [...nds, newNode])
@@ -518,10 +721,19 @@ function FlowWithControls() {
     return () => window.removeEventListener('previewImage', handlePreviewImage)
   }, [])
 
-  // 处理图片上传
-  const handleUploadImage = useCallback(
+  // 监听视频预览事件
+  useEffect(() => {
+    const handlePreviewVideo = (e: Event) => {
+      const customEvent = e as CustomEvent<{ videoUrl: string }>
+      setPreviewVideo(customEvent.detail.videoUrl)
+    }
+    window.addEventListener('previewVideo', handlePreviewVideo)
+    return () => window.removeEventListener('previewVideo', handlePreviewVideo)
+  }, [])
+
+  // 处理媒体上传（图片/视频/音频）
+  const handleUploadMedia = useCallback(
     (nodeId: string) => {
-      // 触发对应节点的文件 input
       const nodeEl = document.querySelector(`[data-id="${nodeId}"]`) as HTMLElement
       const fileInput = nodeEl?.querySelector('input[type="file"]') as HTMLInputElement
       fileInput?.click()
@@ -619,18 +831,20 @@ function FlowWithControls() {
             zIndex: 1000,
           }}
         >
-          <button
-            className="context-menu-item"
-            onClick={() => {
-              handleUploadImage(contextMenu.nodeId)
-              setContextMenu(null)
-            }}
-          >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12" />
-            </svg>
-            上传图片
-          </button>
+          {(contextMenu.nodeType === 'image' || contextMenu.nodeType === 'video' || contextMenu.nodeType === 'audio') && (
+            <button
+              className="context-menu-item"
+              onClick={() => {
+                handleUploadMedia(contextMenu.nodeId)
+                setContextMenu(null)
+              }}
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12" />
+              </svg>
+              {contextMenu.nodeType === 'image' ? '上传图片' : contextMenu.nodeType === 'video' ? '上传视频' : '上传音频'}
+            </button>
+          )}
         </div>
       )}
 
@@ -652,6 +866,30 @@ function FlowWithControls() {
             src={previewImage}
             alt=""
             className="preview-modal-img"
+            onClick={(e) => e.stopPropagation()}
+          />
+        </div>
+      )}
+
+      {/* 视频预览弹窗 */}
+      {previewVideo && (
+        <div
+          className="video-preview-modal"
+          onClick={() => setPreviewVideo(null)}
+        >
+          <button
+            className="preview-modal-close"
+            onClick={() => setPreviewVideo(null)}
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M18 6L6 18M6 6l12 12" />
+            </svg>
+          </button>
+          <video
+            src={previewVideo}
+            className="video-modal-player"
+            controls
+            autoPlay
             onClick={(e) => e.stopPropagation()}
           />
         </div>
