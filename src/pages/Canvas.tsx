@@ -174,6 +174,7 @@ function BaseNode({ data, selected, id }: { data: { label: string; type: string;
   const imageFileInputRef = useRef<HTMLInputElement>(null)
   const videoFileInputRef = useRef<HTMLInputElement>(null)
   const audioFileInputRef = useRef<HTMLInputElement>(null)
+  const [uploading, setUploading] = useState(false)
 
   // 在 window 级别拦截 pointerdown/mousedown，判断 target 是否在 textarea 内，阻止冒泡以防触发节点拖拽
   useEffect(() => {
@@ -252,12 +253,17 @@ function BaseNode({ data, selected, id }: { data: { label: string; type: string;
     async (e: React.ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0]
       if (file) {
-        const arrayBuffer = await file.arrayBuffer()
-        const bytes = new Uint8Array(arrayBuffer)
-        const path = await uploadFile(file.name, bytes)
-        console.log('[Canvas] handleImageUpload: uploaded to', path)
-        // 保存文件路径，显示时会通过 mediaPathToUrl 转换
-        updateImageUrl(path)
+        setUploading(true)
+        try {
+          const arrayBuffer = await file.arrayBuffer()
+          const bytes = new Uint8Array(arrayBuffer)
+          const path = await uploadFile(file.name, bytes)
+          console.log('[Canvas] handleImageUpload: uploaded to', path)
+          // 保存文件路径，显示时会通过 mediaPathToUrl 转换
+          updateImageUrl(path)
+        } finally {
+          setUploading(false)
+        }
       }
       e.target.value = ''
     },
@@ -269,11 +275,16 @@ function BaseNode({ data, selected, id }: { data: { label: string; type: string;
     async (e: React.ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0]
       if (file) {
-        const arrayBuffer = await file.arrayBuffer()
-        const bytes = new Uint8Array(arrayBuffer)
-        const path = await uploadFile(file.name, bytes)
-        // 保存文件路径，显示时会通过 mediaPathToUrl 转换
-        updateVideoUrl(path)
+        setUploading(true)
+        try {
+          const arrayBuffer = await file.arrayBuffer()
+          const bytes = new Uint8Array(arrayBuffer)
+          const path = await uploadFile(file.name, bytes)
+          // 保存文件路径，显示时会通过 mediaPathToUrl 转换
+          updateVideoUrl(path)
+        } finally {
+          setUploading(false)
+        }
       }
       e.target.value = ''
     },
@@ -285,11 +296,16 @@ function BaseNode({ data, selected, id }: { data: { label: string; type: string;
     async (e: React.ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0]
       if (file) {
-        const arrayBuffer = await file.arrayBuffer()
-        const bytes = new Uint8Array(arrayBuffer)
-        const path = await uploadFile(file.name, bytes)
-        // 保存文件路径，显示时会通过 mediaPathToUrl 转换
-        updateAudioUrl(path)
+        setUploading(true)
+        try {
+          const arrayBuffer = await file.arrayBuffer()
+          const bytes = new Uint8Array(arrayBuffer)
+          const path = await uploadFile(file.name, bytes)
+          // 保存文件路径，显示时会通过 mediaPathToUrl 转换
+          updateAudioUrl(path)
+        } finally {
+          setUploading(false)
+        }
       }
       e.target.value = ''
     },
@@ -382,6 +398,11 @@ function BaseNode({ data, selected, id }: { data: { label: string; type: string;
                   </svg>
                 </button>
               </div>
+            ) : uploading ? (
+              <div className="placeholder-text image-placeholder">
+                <div className="upload-spinner" />
+                <span>上传中...</span>
+              </div>
             ) : (
               <div
                 className="placeholder-text image-placeholder"
@@ -418,6 +439,11 @@ function BaseNode({ data, selected, id }: { data: { label: string; type: string;
                   </svg>
                 </button>
               </div>
+            ) : uploading ? (
+              <div className="placeholder-text media-placeholder">
+                <div className="upload-spinner" />
+                <span>上传中...</span>
+              </div>
             ) : (
               <div
                 className="placeholder-text media-placeholder"
@@ -439,6 +465,11 @@ function BaseNode({ data, selected, id }: { data: { label: string; type: string;
                   className="node-media-preview"
                   preload="metadata"
                 />
+              </div>
+            ) : uploading ? (
+              <div className="placeholder-text media-placeholder">
+                <div className="upload-spinner" />
+                <span>上传中...</span>
               </div>
             ) : (
               <div
