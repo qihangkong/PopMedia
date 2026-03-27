@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import HeaderBar from '../components/HeaderBar'
-import { getAllCanvases, getProjects, deleteCanvasById, CanvasInfo, ProjectInfoData, readFileAsBase64 } from '../utils/tauriApi'
+import { getAllCanvases, getProjects, deleteCanvasById, CanvasInfo, ProjectInfoData, getFileUrl } from '../utils/tauriApi'
 
 export default function Home() {
   const navigate = useNavigate()
@@ -33,9 +33,9 @@ export default function Home() {
             const paths = JSON.parse(canvas.preview) as string[]
             console.log('[Home] Canvas preview:', canvas.name, canvas.preview, paths)
             if (paths.length > 0 && paths[0].startsWith('assets/')) {
-              const dataUrl = await readFileAsBase64(paths[0])
-              console.log('[Home] Loaded preview for:', canvas.name, 'length:', dataUrl.length)
-              urls[canvas.id] = dataUrl
+              const fileUrl = await getFileUrl(paths[0])
+              console.log('[Home] Loaded preview for:', canvas.name, fileUrl)
+              urls[canvas.id] = fileUrl
             }
           } catch (err) {
             console.error('[Home] Failed to load preview for:', canvas.name, err)

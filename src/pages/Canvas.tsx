@@ -39,11 +39,11 @@ import {
   MAX_ZOOM,
   FIT_VIEW_PADDING,
 } from '../constants'
-import { saveCanvasData, loadCanvasData, saveCanvasMeta, updateCanvasPreview, uploadFile, readFileAsBase64 } from '../utils/tauriApi'
+import { saveCanvasData, loadCanvasData, saveCanvasMeta, updateCanvasPreview, uploadFile, getFileUrl } from '../utils/tauriApi'
 
-// Convert stored media path to displayable data URL
+// Convert stored media path to displayable URL
 async function mediaPathToUrl(path: string): Promise<string> {
-  return await readFileAsBase64(path)
+  return await getFileUrl(path)
 }
 
 // 生成UUID

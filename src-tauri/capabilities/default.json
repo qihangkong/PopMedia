@@ -18,6 +18,8 @@
     "fs:allow-read-text-file",
     "fs:allow-write-text-file",
     "fs:allow-read-file",
+    "fs:allow-applocaldata-read",
+    "fs:allow-applocaldata-write",
     {
       "identifier": "fs:scope",
       "allow": [

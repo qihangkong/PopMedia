@@ -283,47 +283,10 @@ pub async fn upload_file(filename: String, data: Vec<u8>) -> Result<String, Stri
     Ok(format!("assets/{}", local_filename))
 }
 
-/// Get full path for a relative uploads path
+/// Get asset path - uses same path as upload_file for consistency
 #[tauri::command]
-pub fn get_file_path(relative_path: String) -> Result<String, String> {
+pub fn get_asset_path(filename: String) -> Result<String, String> {
     let uploads_dir = get_uploads_dir();
-    let full_path = uploads_dir.join(&relative_path);
-    Ok(full_path.to_string_lossy().to_string())
-}
-
-/// Read file and return as base64 data URL
-#[tauri::command]
-pub fn read_file_as_base64(relative_path: String) -> Result<String, String> {
-    let uploads_dir = get_uploads_dir();
-    // Strip "assets/" prefix if present since uploads_dir already includes it
-    let filename = relative_path.strip_prefix("assets/").unwrap_or(relative_path.as_str());
-    let full_path = uploads_dir.join(filename);
-
-    let bytes = std::fs::read(&full_path)
-        .map_err(|e| e.to_string())?;
-
-    // Determine MIME type from extension
-    let ext = full_path.extension()
-        .and_then(|e| e.to_str())
-        .unwrap_or("bin")
-        .to_lowercase();
-
-    let mime_type = match ext.as_str() {
-        "jpg" | "jpeg" => "image/jpeg",
-        "png" => "image/png",
-        "gif" => "image/gif",
-        "webp" => "image/webp",
-        "svg" => "image/svg+xml",
-        "mp4" => "video/mp4",
-        "webm" => "video/webm",
-        "mp3" => "audio/mpeg",
-        "wav" => "audio/wav",
-        "ogg" => "audio/ogg",
-        _ => "application/octet-stream",
-    };
-
-    use base64::{Engine as _, engine::general_purpose};
-    let base64_str = general_purpose::STANDARD.encode(&bytes);
-
-    Ok(format!("data:{};base64,{}", mime_type, base64_str))
+    let asset_path = uploads_dir.join(&filename);
+    Ok(asset_path.to_string_lossy().to_string())
 }

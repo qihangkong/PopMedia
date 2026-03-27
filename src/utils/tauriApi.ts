@@ -1,4 +1,4 @@
-import { invoke, isTauri } from '@tauri-apps/api/core'
+import { invoke, isTauri, convertFileSrc } from '@tauri-apps/api/core'
 
 export interface ProjectInfo {
   name: string
@@ -187,12 +187,20 @@ export async function uploadFile(filename: string, data: Uint8Array): Promise<st
   return await invoke<string>('upload_file', { filename, data })
 }
 
-// Get full path for a relative uploads path
-export async function getFilePath(relativePath: string): Promise<string> {
-  return await invoke<string>('get_file_path', { relativePath })
+// Get asset path using Tauri 2 path API
+async function getAssetPath(filename: string): Promise<string> {
+  return await invoke<string>('get_asset_path', { filename })
 }
 
-// Read file and return as base64 data URL
-export async function readFileAsBase64(relativePath: string): Promise<string> {
-  return await invoke<string>('read_file_as_base64', { relativePath })
+// Get file URL for direct access via asset:// protocol
+export async function getFileUrl(relativePath: string): Promise<string> {
+  // Strip "assets/" prefix since uploads_dir already includes it
+  const filename = relativePath.replace(/^assets\//, '')
+
+  // Use Tauri 2's path API to get correct asset path
+  const fullPath = await getAssetPath(filename)
+
+  // Use convertFileSrc to generate correct asset URL
+  return convertFileSrc(fullPath)
 }
+

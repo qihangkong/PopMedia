@@ -40,7 +40,15 @@
       }
     ],
     "security": {
-      "csp": "default-src 'self'; img-src 'self' data: blob:; media-src 'self' data: blob:; script-src 'self'; style-src 'self' 'unsafe-inline'"
+      "assetProtocol": {
+        "enable": true,
+        "scope": [
+          "$APPLOCALDATA/assets/**",
+          "$APPLOCALDATA/**/*",
+          "**/*"
+        ]
+      },
+      "csp": "default-src 'self'; img-src 'self' data: blob: asset: https://asset.localhost; media-src 'self' data: blob: asset: https://asset.localhost; script-src 'self'; style-src 'self' 'unsafe-inline'"
     }
   },
   "bundle": {
