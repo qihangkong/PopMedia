@@ -128,6 +128,7 @@ export interface CanvasInfo {
   id: string
   name: string
   thumbnail: string | null
+  preview: string | null  // JSON array of recent media paths for preview
   project_id: string | null
   created_at: string
   updated_at: string
@@ -151,6 +152,11 @@ export async function saveCanvasMeta(canvas: CanvasInfo): Promise<CanvasInfo> {
 // Delete a canvas
 export async function deleteCanvasById(id: string): Promise<string> {
   return await invoke<string>('delete_canvas_by_id', { id })
+}
+
+// Update canvas preview (JSON array of media paths)
+export async function updateCanvasPreview(id: string, preview: string): Promise<string> {
+  return await invoke<string>('update_canvas_preview', { id, preview })
 }
 
 // ==================== Canvas Data Commands ====================

@@ -111,7 +111,15 @@ export default function Home() {
             {recentCanvases.map((canvas) => (
               <div key={canvas.id} className="card" onClick={() => handleCanvasClick(canvas)}>
                 <div className="card-thumbnail">
-                  {canvas.thumbnail ? (
+                  {canvas.preview ? (
+                    <div className="card-preview-grid">
+                      {JSON.parse(canvas.preview).map((media: string, index: number) => (
+                        <div key={index} className="card-preview-item">
+                          <img src={media} alt="" draggable="false" />
+                        </div>
+                      ))}
+                    </div>
+                  ) : canvas.thumbnail ? (
                     <img src={canvas.thumbnail} alt={canvas.name} className="card-image" draggable="false" />
                   ) : (
                     <div className="card-thumbnail-placeholder">

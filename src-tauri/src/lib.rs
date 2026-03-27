@@ -43,6 +43,7 @@ pub struct CanvasInfo {
     pub id: String,
     pub name: String,
     pub thumbnail: Option<String>,
+    pub preview: Option<String>,  // JSON array of recent media paths for preview
     pub project_id: Option<String>,
     pub created_at: String,
     pub updated_at: String,
@@ -73,6 +74,9 @@ fn get_db_path() -> PathBuf {
 fn init_database(conn: &Connection) -> SqliteResult<()> {
     let migration_sql = include_str!("../migrations/001_initial.sql");
     conn.execute_batch(migration_sql)?;
+    // Run additional migrations
+    let migration_002 = include_str!("../migrations/002_canvas_preview.sql");
+    conn.execute_batch(migration_002)?;
     Ok(())
 }
 
@@ -468,7 +472,7 @@ fn delete_project_by_id(id: String, state: tauri::State<AppState>) -> Result<Str
 fn get_canvases_by_project(project_id: String, state: tauri::State<AppState>) -> Result<Vec<CanvasInfo>, String> {
     let conn = state.db.lock().map_err(|e| e.to_string())?;
     let mut stmt = conn
-        .prepare("SELECT id, name, thumbnail, project_id, created_at, updated_at FROM canvases WHERE project_id = ?1 ORDER BY updated_at DESC")
+        .prepare("SELECT id, name, thumbnail, preview, project_id, created_at, updated_at FROM canvases WHERE project_id = ?1 ORDER BY updated_at DESC")
         .map_err(|e| e.to_string())?;
 
     let canvases = stmt
@@ -477,9 +481,10 @@ fn get_canvases_by_project(project_id: String, state: tauri::State<AppState>) ->
                 id: row.get(0)?,
                 name: row.get(1)?,
                 thumbnail: row.get(2)?,
-                project_id: row.get(3)?,
-                created_at: row.get(4)?,
-                updated_at: row.get(5)?,
+                preview: row.get(3)?,
+                project_id: row.get(4)?,
+                created_at: row.get(5)?,
+                updated_at: row.get(6)?,
             })
         })
         .map_err(|e| e.to_string())?
@@ -494,7 +499,7 @@ fn get_canvases_by_project(project_id: String, state: tauri::State<AppState>) ->
 fn get_all_canvases(state: tauri::State<AppState>) -> Result<Vec<CanvasInfo>, String> {
     let conn = state.db.lock().map_err(|e| e.to_string())?;
     let mut stmt = conn
-        .prepare("SELECT id, name, thumbnail, project_id, created_at, updated_at FROM canvases ORDER BY updated_at DESC LIMIT 20")
+        .prepare("SELECT id, name, thumbnail, preview, project_id, created_at, updated_at FROM canvases ORDER BY updated_at DESC LIMIT 20")
         .map_err(|e| e.to_string())?;
 
     let canvases = stmt
@@ -503,9 +508,10 @@ fn get_all_canvases(state: tauri::State<AppState>) -> Result<Vec<CanvasInfo>, St
                 id: row.get(0)?,
                 name: row.get(1)?,
                 thumbnail: row.get(2)?,
-                project_id: row.get(3)?,
-                created_at: row.get(4)?,
-                updated_at: row.get(5)?,
+                preview: row.get(3)?,
+                project_id: row.get(4)?,
+                created_at: row.get(5)?,
+                updated_at: row.get(6)?,
             })
         })
         .map_err(|e| e.to_string())?
@@ -521,9 +527,9 @@ fn save_canvas_meta(canvas: CanvasInfo, state: tauri::State<AppState>) -> Result
     let conn = state.db.lock().map_err(|e| e.to_string())?;
 
     conn.execute(
-        "INSERT OR REPLACE INTO canvases (id, name, thumbnail, project_id, created_at, updated_at)
-         VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
-        params![canvas.id, canvas.name, canvas.thumbnail, canvas.project_id, canvas.created_at, canvas.updated_at],
+        "INSERT OR REPLACE INTO canvases (id, name, thumbnail, preview, project_id, created_at, updated_at)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
+        params![canvas.id, canvas.name, canvas.thumbnail, canvas.preview, canvas.project_id, canvas.created_at, canvas.updated_at],
     )
     .map_err(|e| e.to_string())?;
 
@@ -537,6 +543,19 @@ fn delete_canvas_by_id(id: String, state: tauri::State<AppState>) -> Result<Stri
     conn.execute("DELETE FROM canvases WHERE id = ?1", params![id])
         .map_err(|e| e.to_string())?;
     Ok(format!("Canvas '{}' deleted", id))
+}
+
+/// Update canvas preview (JSON array of media paths)
+#[tauri::command]
+fn update_canvas_preview(id: String, preview: String, state: tauri::State<AppState>) -> Result<String, String> {
+    let conn = state.db.lock().map_err(|e| e.to_string())?;
+    let now = chrono::Utc::now().to_rfc3339();
+    conn.execute(
+        "UPDATE canvases SET preview = ?1, updated_at = ?2 WHERE id = ?3",
+        params![preview, now, id],
+    )
+    .map_err(|e| e.to_string())?;
+    Ok(format!("Canvas '{}' preview updated", id))
 }
 
 // ==================== Canvas Data Commands ====================
@@ -712,6 +731,7 @@ pub fn run() {
             get_all_canvases,
             save_canvas_meta,
             delete_canvas_by_id,
+            update_canvas_preview,
             // Canvas data commands
             save_canvas_data,
             load_canvas_data,
