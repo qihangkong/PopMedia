@@ -128,8 +128,8 @@ export default function Home() {
             {recentCanvases.map((canvas) => (
               <div key={canvas.id} className="card" onClick={() => handleCanvasClick(canvas)}>
                 <div className="card-thumbnail">
-                  {canvas.preview ? (
-                    <img src={previewUrls[canvas.id] || JSON.parse(canvas.preview)[0]} alt={canvas.name} className="card-image" draggable="false" />
+                  {canvas.preview && previewUrls[canvas.id] ? (
+                    <img src={previewUrls[canvas.id]} alt={canvas.name} className="card-image" draggable="false" />
                   ) : canvas.thumbnail ? (
                     <img src={canvas.thumbnail} alt={canvas.name} className="card-image" draggable="false" />
                   ) : (
