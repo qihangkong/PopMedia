@@ -4,6 +4,12 @@ use std::fs;
 use std::path::PathBuf;
 use std::sync::Mutex;
 
+// Embedded migrations: (version, sql_content)
+const MIGRATIONS: &[(&str, &str)] = &[
+    ("001_initial", include_str!("../migrations/001_initial.sql")),
+    ("002_canvas_preview", include_str!("../migrations/002_canvas_preview.sql")),
+];
+
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ProjectInfo {
     pub name: String,
@@ -72,17 +78,36 @@ fn get_db_path() -> PathBuf {
 }
 
 fn init_database(conn: &Connection) -> SqliteResult<()> {
-    let migration_sql = include_str!("../migrations/001_initial.sql");
-    conn.execute_batch(migration_sql)?;
-    // Run additional migrations (only if column doesn't exist)
-    let has_preview: bool = conn.query_row(
-        "SELECT COUNT(*) > 0 FROM pragma_table_info('canvases') WHERE name = 'preview'",
-        [],
-        |row| row.get(0),
+    // Create migration tracking table (inline, not a migration itself)
+    conn.execute_batch(
+        "CREATE TABLE IF NOT EXISTS schema_migrations (
+            version TEXT PRIMARY KEY,
+            applied_at TEXT NOT NULL
+        );"
     )?;
-    if !has_preview {
-        conn.execute("ALTER TABLE canvases ADD COLUMN preview TEXT", [])?;
+
+    // Get already applied migrations
+    let mut stmt = conn.prepare("SELECT version FROM schema_migrations")?;
+    let applied: Vec<String> = stmt
+        .query_map([], |row| row.get(0))?
+        .filter_map(|r| r.ok())
+        .collect();
+    drop(stmt);
+
+    // Apply embedded migrations in order
+    let now = chrono::Utc::now().to_rfc3339();
+    for (version, sql) in MIGRATIONS {
+        if !applied.contains(&version.to_string()) {
+            log::info!("Applying migration: {}", version);
+            conn.execute_batch(sql)?;
+            conn.execute(
+                "INSERT INTO schema_migrations (version, applied_at) VALUES (?1, ?2)",
+                params![version, now],
+            )?;
+            log::info!("Migration {} applied successfully", version);
+        }
     }
+
     Ok(())
 }
 
