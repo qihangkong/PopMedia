@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import HeaderBar from '../components/HeaderBar'
-import { getAllCanvases, getProjects, deleteCanvasById, CanvasInfo, ProjectInfoData } from '../utils/tauriApi'
+import { getAllCanvases, getProjects, deleteCanvasById, CanvasInfo, ProjectInfoData, readFileAsBase64 } from '../utils/tauriApi'
 
 export default function Home() {
   const navigate = useNavigate()
@@ -9,6 +9,7 @@ export default function Home() {
   const [projects, setProjects] = useState<ProjectInfoData[]>([])
   const [loading, setLoading] = useState(true)
   const [deleteModal, setDeleteModal] = useState<{ show: boolean; canvas: CanvasInfo | null }>({ show: false, canvas: null })
+  const [previewUrls, setPreviewUrls] = useState<Record<string, string>>({})
 
   useEffect(() => {
     loadData()
@@ -23,6 +24,22 @@ export default function Home() {
       ])
       setRecentCanvases(canvases)
       setProjects(projectsData)
+
+      // Convert preview paths to data URLs
+      const urls: Record<string, string> = {}
+      for (const canvas of canvases) {
+        if (canvas.preview) {
+          try {
+            const paths = JSON.parse(canvas.preview) as string[]
+            if (paths.length > 0 && paths[0].startsWith('uploads/')) {
+              urls[canvas.id] = await readFileAsBase64(paths[0])
+            }
+          } catch {
+            // Ignore parse errors
+          }
+        }
+      }
+      setPreviewUrls(urls)
     } catch (err) {
       console.error('Failed to load home data:', err)
     } finally {
@@ -112,7 +129,7 @@ export default function Home() {
               <div key={canvas.id} className="card" onClick={() => handleCanvasClick(canvas)}>
                 <div className="card-thumbnail">
                   {canvas.preview ? (
-                    <img src={JSON.parse(canvas.preview)[0]} alt={canvas.name} className="card-image" draggable="false" />
+                    <img src={previewUrls[canvas.id] || JSON.parse(canvas.preview)[0]} alt={canvas.name} className="card-image" draggable="false" />
                   ) : canvas.thumbnail ? (
                     <img src={canvas.thumbnail} alt={canvas.name} className="card-image" draggable="false" />
                   ) : (

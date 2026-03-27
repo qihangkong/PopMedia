@@ -181,3 +181,18 @@ export async function loadCanvasData(id: string): Promise<CanvasData> {
 export async function uploadMedia(url: string, filename: string): Promise<string> {
   return await invoke<string>('upload_media', { url, filename })
 }
+
+// Upload local file data and return relative path
+export async function uploadFile(filename: string, data: Uint8Array): Promise<string> {
+  return await invoke<string>('upload_file', { filename, data })
+}
+
+// Get full path for a relative uploads path
+export async function getFilePath(relativePath: string): Promise<string> {
+  return await invoke<string>('get_file_path', { relativePath })
+}
+
+// Read file and return as base64 data URL
+export async function readFileAsBase64(relativePath: string): Promise<string> {
+  return await invoke<string>('read_file_as_base64', { relativePath })
+}

@@ -39,7 +39,12 @@ import {
   MAX_ZOOM,
   FIT_VIEW_PADDING,
 } from '../constants'
-import { saveCanvasData, loadCanvasData, saveCanvasMeta, updateCanvasPreview } from '../utils/tauriApi'
+import { saveCanvasData, loadCanvasData, saveCanvasMeta, updateCanvasPreview, uploadFile, readFileAsBase64 } from '../utils/tauriApi'
+
+// Convert stored media path to displayable data URL
+async function mediaPathToUrl(path: string): Promise<string> {
+  return await readFileAsBase64(path)
+}
 
 // 生成UUID
 function generateUUID(): string {
@@ -118,6 +123,36 @@ function BaseNode({ data, selected, id }: { data: { label: string; type: string;
   const { setNodes } = useReactFlow()
   const type = data.type || 'text'
   const meta = NODE_TYPE_MAP[type]
+  const [displayImageUrl, setDisplayImageUrl] = useState(data.imageUrl || '')
+  const [displayVideoUrl, setDisplayVideoUrl] = useState(data.videoUrl || '')
+  const [displayAudioUrl, setDisplayAudioUrl] = useState(data.audioUrl || '')
+
+  // 当 imageUrl 变为文件路径时，自动转换为 data URL
+  useEffect(() => {
+    if (data.imageUrl?.startsWith('uploads/')) {
+      mediaPathToUrl(data.imageUrl).then(setDisplayImageUrl)
+    } else {
+      setDisplayImageUrl(data.imageUrl || '')
+    }
+  }, [data.imageUrl])
+
+  // 当 videoUrl 变为文件路径时，自动转换为 data URL
+  useEffect(() => {
+    if (data.videoUrl?.startsWith('uploads/')) {
+      mediaPathToUrl(data.videoUrl).then(setDisplayVideoUrl)
+    } else {
+      setDisplayVideoUrl(data.videoUrl || '')
+    }
+  }, [data.videoUrl])
+
+  // 当 audioUrl 变为文件路径时，自动转换为 data URL
+  useEffect(() => {
+    if (data.audioUrl?.startsWith('uploads/')) {
+      mediaPathToUrl(data.audioUrl).then(setDisplayAudioUrl)
+    } else {
+      setDisplayAudioUrl(data.audioUrl || '')
+    }
+  }, [data.audioUrl])
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const onResize = useCallback((nodeId: string, width: number, height: number) => {
@@ -214,41 +249,46 @@ function BaseNode({ data, selected, id }: { data: { label: string; type: string;
 
   // 处理图片上传
   const handleImageUpload = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => {
+    async (e: React.ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0]
       if (file) {
-        const reader = new FileReader()
-        reader.onload = (event) => {
-          const result = event.target?.result as string
-          updateImageUrl(result)
-        }
-        reader.readAsDataURL(file)
+        const arrayBuffer = await file.arrayBuffer()
+        const bytes = new Uint8Array(arrayBuffer)
+        const path = await uploadFile(file.name, bytes)
+        // 保存文件路径，显示时会通过 mediaPathToUrl 转换
+        updateImageUrl(path)
       }
       e.target.value = ''
     },
     [updateImageUrl]
   )
 
-  // 处理视频上传（使用 blob URL 避免 base64 性能问题）
+  // 处理视频上传
   const handleVideoUpload = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => {
+    async (e: React.ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0]
       if (file) {
-        const blobUrl = URL.createObjectURL(file)
-        updateVideoUrl(blobUrl)
+        const arrayBuffer = await file.arrayBuffer()
+        const bytes = new Uint8Array(arrayBuffer)
+        const path = await uploadFile(file.name, bytes)
+        // 保存文件路径，显示时会通过 mediaPathToUrl 转换
+        updateVideoUrl(path)
       }
       e.target.value = ''
     },
     [updateVideoUrl]
   )
 
-  // 处理音频上传（使用 blob URL 避免 base64 性能问题）
+  // 处理音频上传
   const handleAudioUpload = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => {
+    async (e: React.ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0]
       if (file) {
-        const blobUrl = URL.createObjectURL(file)
-        updateAudioUrl(blobUrl)
+        const arrayBuffer = await file.arrayBuffer()
+        const bytes = new Uint8Array(arrayBuffer)
+        const path = await uploadFile(file.name, bytes)
+        // 保存文件路径，显示时会通过 mediaPathToUrl 转换
+        updateAudioUrl(path)
       }
       e.target.value = ''
     },
@@ -319,10 +359,10 @@ function BaseNode({ data, selected, id }: { data: { label: string; type: string;
               }}
             />
           ) : isImageNode ? (
-            data.imageUrl ? (
+            displayImageUrl ? (
               <div className="image-preview-wrapper">
                 <img
-                  src={data.imageUrl}
+                  src={displayImageUrl}
                   alt=""
                   className="node-image-preview"
                   draggable={false}
@@ -332,7 +372,7 @@ function BaseNode({ data, selected, id }: { data: { label: string; type: string;
                   title="预览图片"
                   onClick={(e) => {
                     e.stopPropagation()
-                    dispatchPreviewEvent('previewImage', { imageUrl: data.imageUrl })
+                    dispatchPreviewEvent('previewImage', { imageUrl: displayImageUrl })
                   }}
                 >
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -355,10 +395,10 @@ function BaseNode({ data, selected, id }: { data: { label: string; type: string;
               </div>
             )
           ) : isVideoNode ? (
-            data.videoUrl ? (
+            displayVideoUrl ? (
               <div className="video-preview-wrapper">
                 <video
-                  src={data.videoUrl}
+                  src={displayVideoUrl}
                   className="node-media-preview"
                   preload="metadata"
                   controls
@@ -368,7 +408,7 @@ function BaseNode({ data, selected, id }: { data: { label: string; type: string;
                   title="全屏预览视频"
                   onClick={(e) => {
                     e.stopPropagation()
-                    dispatchPreviewEvent('previewVideo', { videoUrl: data.videoUrl })
+                    dispatchPreviewEvent('previewVideo', { videoUrl: displayVideoUrl })
                   }}
                 >
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -390,10 +430,10 @@ function BaseNode({ data, selected, id }: { data: { label: string; type: string;
               </div>
             )
           ) : isAudioNode ? (
-            data.audioUrl ? (
+            displayAudioUrl ? (
               <div className="audio-preview-wrapper">
                 <audio
-                  src={data.audioUrl}
+                  src={displayAudioUrl}
                   controls
                   className="node-media-preview"
                   preload="metadata"
@@ -790,8 +830,28 @@ export default function Canvas() {
   const loadCanvas = useCallback(async (id: string) => {
     try {
       const data = await loadCanvasData(id)
+
+      // Convert local media paths to asset URLs
       if (data.nodes && Array.isArray(data.nodes)) {
-        setNodes(data.nodes as Node[])
+        const convertedNodes = await Promise.all(
+          (data.nodes as Node[]).map(async (node) => {
+            const converted = { ...node }
+            if (converted.data) {
+              const nodeData = converted.data as { imageUrl?: string; videoUrl?: string; audioUrl?: string }
+              if (nodeData.imageUrl?.startsWith('uploads/')) {
+                converted.data = { ...converted.data, imageUrl: await mediaPathToUrl(nodeData.imageUrl) } as Node['data']
+              }
+              if (nodeData.videoUrl?.startsWith('uploads/')) {
+                converted.data = { ...converted.data, videoUrl: await mediaPathToUrl(nodeData.videoUrl) } as Node['data']
+              }
+              if (nodeData.audioUrl?.startsWith('uploads/')) {
+                converted.data = { ...converted.data, audioUrl: await mediaPathToUrl(nodeData.audioUrl) } as Node['data']
+              }
+            }
+            return converted
+          })
+        )
+        setNodes(convertedNodes)
       }
       if (data.edges && Array.isArray(data.edges)) {
         setEdges(data.edges as Edge[])

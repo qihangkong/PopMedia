@@ -80,6 +80,9 @@ pub fn run() {
             commands::save_canvas_data,
             commands::load_canvas_data,
             commands::upload_media,
+            commands::upload_file,
+            commands::get_file_path,
+            commands::read_file_as_base64,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
