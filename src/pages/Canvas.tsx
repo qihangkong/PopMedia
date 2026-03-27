@@ -129,7 +129,7 @@ function BaseNode({ data, selected, id }: { data: { label: string; type: string;
 
   // 当 imageUrl 变为文件路径时，自动转换为 data URL
   useEffect(() => {
-    if (data.imageUrl?.startsWith('uploads/')) {
+    if (data.imageUrl?.startsWith('assets/')) {
       mediaPathToUrl(data.imageUrl).then(setDisplayImageUrl)
     } else {
       setDisplayImageUrl(data.imageUrl || '')
@@ -138,7 +138,7 @@ function BaseNode({ data, selected, id }: { data: { label: string; type: string;
 
   // 当 videoUrl 变为文件路径时，自动转换为 data URL
   useEffect(() => {
-    if (data.videoUrl?.startsWith('uploads/')) {
+    if (data.videoUrl?.startsWith('assets/')) {
       mediaPathToUrl(data.videoUrl).then(setDisplayVideoUrl)
     } else {
       setDisplayVideoUrl(data.videoUrl || '')
@@ -147,7 +147,7 @@ function BaseNode({ data, selected, id }: { data: { label: string; type: string;
 
   // 当 audioUrl 变为文件路径时，自动转换为 data URL
   useEffect(() => {
-    if (data.audioUrl?.startsWith('uploads/')) {
+    if (data.audioUrl?.startsWith('assets/')) {
       mediaPathToUrl(data.audioUrl).then(setDisplayAudioUrl)
     } else {
       setDisplayAudioUrl(data.audioUrl || '')
@@ -840,13 +840,13 @@ export default function Canvas() {
             const converted = { ...node }
             if (converted.data) {
               const nodeData = converted.data as { imageUrl?: string; videoUrl?: string; audioUrl?: string }
-              if (nodeData.imageUrl?.startsWith('uploads/')) {
+              if (nodeData.imageUrl?.startsWith('assets/')) {
                 converted.data = { ...converted.data, imageUrl: await mediaPathToUrl(nodeData.imageUrl) } as Node['data']
               }
-              if (nodeData.videoUrl?.startsWith('uploads/')) {
+              if (nodeData.videoUrl?.startsWith('assets/')) {
                 converted.data = { ...converted.data, videoUrl: await mediaPathToUrl(nodeData.videoUrl) } as Node['data']
               }
-              if (nodeData.audioUrl?.startsWith('uploads/')) {
+              if (nodeData.audioUrl?.startsWith('assets/')) {
                 converted.data = { ...converted.data, audioUrl: await mediaPathToUrl(nodeData.audioUrl) } as Node['data']
               }
             }

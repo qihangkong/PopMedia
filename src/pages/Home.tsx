@@ -32,7 +32,7 @@ export default function Home() {
           try {
             const paths = JSON.parse(canvas.preview) as string[]
             console.log('[Home] Canvas preview:', canvas.name, canvas.preview, paths)
-            if (paths.length > 0 && paths[0].startsWith('uploads/')) {
+            if (paths.length > 0 && paths[0].startsWith('assets/')) {
               const dataUrl = await readFileAsBase64(paths[0])
               console.log('[Home] Loaded preview for:', canvas.name, 'length:', dataUrl.length)
               urls[canvas.id] = dataUrl

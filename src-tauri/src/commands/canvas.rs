@@ -13,7 +13,7 @@ fn get_uploads_dir() -> std::path::PathBuf {
     dirs::data_local_dir()
         .unwrap_or_else(|| std::path::PathBuf::from("."))
         .join("PopMedia")
-        .join("uploads")
+        .join("assets")
 }
 
 // ==================== Projects API Commands ====================
@@ -255,7 +255,7 @@ pub async fn upload_file(filename: String, data: Vec<u8>) -> Result<String, Stri
 
     std::fs::write(&file_path, &data).map_err(|e| e.to_string())?;
 
-    Ok(format!("uploads/{}", local_filename))
+    Ok(format!("assets/{}", local_filename))
 }
 
 /// Get full path for a relative uploads path
@@ -270,8 +270,8 @@ pub fn get_file_path(relative_path: String) -> Result<String, String> {
 #[tauri::command]
 pub fn read_file_as_base64(relative_path: String) -> Result<String, String> {
     let uploads_dir = get_uploads_dir();
-    // Strip "uploads/" prefix if present since uploads_dir already includes it
-    let filename = relative_path.strip_prefix("uploads/").unwrap_or(relative_path.as_str());
+    // Strip "assets/" prefix if present since uploads_dir already includes it
+    let filename = relative_path.strip_prefix("assets/").unwrap_or(relative_path.as_str());
     let full_path = uploads_dir.join(filename);
 
     let bytes = std::fs::read(&full_path)
