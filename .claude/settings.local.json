@@ -5,7 +5,9 @@
       "Bash(git commit:*)",
       "Bash(npm run:*)",
       "Bash(npm install:*)",
-      "Bash(npx tauri:*)"
+      "Bash(npx tauri:*)",
+      "Bash(cargo check:*)",
+      "Bash(npx tsc:*)"
     ]
   }
 }
