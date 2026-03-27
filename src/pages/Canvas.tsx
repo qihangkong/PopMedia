@@ -833,27 +833,10 @@ export default function Canvas() {
     try {
       const data = await loadCanvasData(id)
 
-      // Convert local media paths to asset URLs
+      // Nodes already have media URLs (file paths or data URLs from database)
+      // BaseNode's useEffect will handle conversion for display
       if (data.nodes && Array.isArray(data.nodes)) {
-        const convertedNodes = await Promise.all(
-          (data.nodes as Node[]).map(async (node) => {
-            const converted = { ...node }
-            if (converted.data) {
-              const nodeData = converted.data as { imageUrl?: string; videoUrl?: string; audioUrl?: string }
-              if (nodeData.imageUrl?.startsWith('assets/')) {
-                converted.data = { ...converted.data, imageUrl: await mediaPathToUrl(nodeData.imageUrl) } as Node['data']
-              }
-              if (nodeData.videoUrl?.startsWith('assets/')) {
-                converted.data = { ...converted.data, videoUrl: await mediaPathToUrl(nodeData.videoUrl) } as Node['data']
-              }
-              if (nodeData.audioUrl?.startsWith('assets/')) {
-                converted.data = { ...converted.data, audioUrl: await mediaPathToUrl(nodeData.audioUrl) } as Node['data']
-              }
-            }
-            return converted
-          })
-        )
-        setNodes(convertedNodes)
+        setNodes(data.nodes as Node[])
       }
       if (data.edges && Array.isArray(data.edges)) {
         setEdges(data.edges as Edge[])
