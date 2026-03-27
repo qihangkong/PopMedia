@@ -215,16 +215,15 @@ pub fn load_canvas_data(id: String) -> Result<CanvasData, String> {
 }
 
 /// Upload media file and return local path
+/// Uses content-addressable storage: same content = same file (deduplication via SHA256 hash)
 #[tauri::command]
 pub async fn upload_media(url: String, filename: String) -> Result<String, String> {
-    let app_data = get_uploads_dir();
-    std::fs::create_dir_all(&app_data).map_err(|e| e.to_string())?;
+    use sha2::{Sha256, Digest};
 
-    let ext = filename.rsplit('.').next().unwrap_or("bin");
-    let local_filename = format!("{}.{}", uuid::Uuid::new_v4(), ext);
-    let local_path = app_data.join(&local_filename);
+    let uploads_dir = get_uploads_dir();
+    std::fs::create_dir_all(&uploads_dir).map_err(|e| e.to_string())?;
 
-    // Download from URL
+    // Download from URL first
     let client = reqwest::Client::new();
     let response = client
         .get(&url)
@@ -238,9 +237,23 @@ pub async fn upload_media(url: String, filename: String) -> Result<String, Strin
     }
 
     let bytes = response.bytes().await.map_err(|e| format!("Read failed: {}", e))?;
-    std::fs::write(&local_path, &bytes).map_err(|e| format!("Write failed: {}", e))?;
 
-    Ok(format!("uploads/{}", local_filename))
+    // Calculate SHA256 hash of content for deduplication
+    let mut hasher = Sha256::new();
+    hasher.update(&bytes);
+    let hash = format!("{:x}", hasher.finalize());
+
+    // Keep original extension for MIME type detection
+    let ext = filename.rsplit('.').next().unwrap_or("bin");
+    let local_filename = format!("{}.{}", hash, ext); // Use full SHA256 hash
+    let file_path = uploads_dir.join(&local_filename);
+
+    // Only write if file doesn't exist (deduplication)
+    if !file_path.exists() {
+        std::fs::write(&file_path, &bytes).map_err(|e| format!("Write failed: {}", e))?;
+    }
+
+    Ok(format!("assets/{}", local_filename))
 }
 
 /// Upload local file data and return relative path
@@ -259,7 +272,7 @@ pub async fn upload_file(filename: String, data: Vec<u8>) -> Result<String, Stri
 
     // Keep original extension for MIME type detection
     let ext = filename.rsplit('.').next().unwrap_or("bin");
-    let local_filename = format!("{}.{}", &hash[..16], ext); // Use first 16 chars of hash
+    let local_filename = format!("{}.{}", hash, ext); // Use full SHA256 hash
     let file_path = uploads_dir.join(&local_filename);
 
     // Only write if file doesn't exist (deduplication)
