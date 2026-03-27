@@ -31,14 +31,18 @@ export default function Home() {
         if (canvas.preview) {
           try {
             const paths = JSON.parse(canvas.preview) as string[]
+            console.log('[Home] Canvas preview:', canvas.name, canvas.preview, paths)
             if (paths.length > 0 && paths[0].startsWith('uploads/')) {
-              urls[canvas.id] = await readFileAsBase64(paths[0])
+              const dataUrl = await readFileAsBase64(paths[0])
+              console.log('[Home] Loaded preview for:', canvas.name, 'length:', dataUrl.length)
+              urls[canvas.id] = dataUrl
             }
-          } catch {
-            // Ignore parse errors
+          } catch (err) {
+            console.error('[Home] Failed to load preview for:', canvas.name, err)
           }
         }
       }
+      console.log('[Home] Preview URLs:', urls)
       setPreviewUrls(urls)
     } catch (err) {
       console.error('Failed to load home data:', err)

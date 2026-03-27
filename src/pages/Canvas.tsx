@@ -255,6 +255,7 @@ function BaseNode({ data, selected, id }: { data: { label: string; type: string;
         const arrayBuffer = await file.arrayBuffer()
         const bytes = new Uint8Array(arrayBuffer)
         const path = await uploadFile(file.name, bytes)
+        console.log('[Canvas] handleImageUpload: uploaded to', path)
         // 保存文件路径，显示时会通过 mediaPathToUrl 转换
         updateImageUrl(path)
       }
@@ -806,6 +807,7 @@ export default function Canvas() {
           mediaUrls.push(url)
         }
       }
+      console.log('[Canvas] saveCanvas: extracted URLs:', mediaUrls)
       // 只保留第一个媒体作为预览
       const preview = JSON.stringify(mediaUrls.slice(0, 1))
       // 更新预览
