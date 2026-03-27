@@ -112,13 +112,7 @@ export default function Home() {
               <div key={canvas.id} className="card" onClick={() => handleCanvasClick(canvas)}>
                 <div className="card-thumbnail">
                   {canvas.preview ? (
-                    <div className="card-preview-grid">
-                      {JSON.parse(canvas.preview).map((media: string, index: number) => (
-                        <div key={index} className="card-preview-item">
-                          <img src={media} alt="" draggable="false" />
-                        </div>
-                      ))}
-                    </div>
+                    <img src={JSON.parse(canvas.preview)[0]} alt={canvas.name} className="card-image" draggable="false" />
                   ) : canvas.thumbnail ? (
                     <img src={canvas.thumbnail} alt={canvas.name} className="card-image" draggable="false" />
                   ) : (

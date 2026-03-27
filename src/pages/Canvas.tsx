@@ -39,7 +39,7 @@ import {
   MAX_ZOOM,
   FIT_VIEW_PADDING,
 } from '../constants'
-import { saveCanvasData, loadCanvasData, saveCanvasMeta } from '../utils/tauriApi'
+import { saveCanvasData, loadCanvasData, saveCanvasMeta, updateCanvasPreview } from '../utils/tauriApi'
 
 // 生成UUID
 function generateUUID(): string {
@@ -754,12 +754,29 @@ export default function Canvas() {
         edges,
         viewport,
       })
+      // 提取所有媒体URL用于预览
+      const mediaUrls: string[] = []
+      const seenUrls = new Set<string>()
+      for (const node of nodes) {
+        const url = (node.data as { imageUrl?: string; videoUrl?: string; audioUrl?: string }).imageUrl
+          || (node.data as { imageUrl?: string; videoUrl?: string; audioUrl?: string }).videoUrl
+          || (node.data as { imageUrl?: string; videoUrl?: string; audioUrl?: string }).audioUrl
+        if (url && !seenUrls.has(url)) {
+          seenUrls.add(url)
+          mediaUrls.push(url)
+        }
+      }
+      // 只保留第一个媒体作为预览
+      const preview = JSON.stringify(mediaUrls.slice(0, 1))
+      // 更新预览
+      await updateCanvasPreview(canvasId, preview)
       // 更新元数据
       await saveCanvasMeta({
         id: canvasId,
         name: canvasName,
         thumbnail: null,
         project_id: null,
+        preview,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       })
