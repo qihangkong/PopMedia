@@ -244,16 +244,28 @@ pub async fn upload_media(url: String, filename: String) -> Result<String, Strin
 }
 
 /// Upload local file data and return relative path
+/// Uses content-addressable storage: same content = same file (deduplication via SHA256 hash)
 #[tauri::command]
 pub async fn upload_file(filename: String, data: Vec<u8>) -> Result<String, String> {
+    use sha2::{Sha256, Digest};
+
     let uploads_dir = get_uploads_dir();
     std::fs::create_dir_all(&uploads_dir).map_err(|e| e.to_string())?;
 
+    // Calculate SHA256 hash of content for deduplication
+    let mut hasher = Sha256::new();
+    hasher.update(&data);
+    let hash = format!("{:x}", hasher.finalize());
+
+    // Keep original extension for MIME type detection
     let ext = filename.rsplit('.').next().unwrap_or("bin");
-    let local_filename = format!("{}.{}", uuid::Uuid::new_v4(), ext);
+    let local_filename = format!("{}.{}", &hash[..16], ext); // Use first 16 chars of hash
     let file_path = uploads_dir.join(&local_filename);
 
-    std::fs::write(&file_path, &data).map_err(|e| e.to_string())?;
+    // Only write if file doesn't exist (deduplication)
+    if !file_path.exists() {
+        std::fs::write(&file_path, &data).map_err(|e| e.to_string())?;
+    }
 
     Ok(format!("assets/{}", local_filename))
 }
