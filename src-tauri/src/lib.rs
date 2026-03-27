@@ -74,9 +74,15 @@ fn get_db_path() -> PathBuf {
 fn init_database(conn: &Connection) -> SqliteResult<()> {
     let migration_sql = include_str!("../migrations/001_initial.sql");
     conn.execute_batch(migration_sql)?;
-    // Run additional migrations
-    let migration_002 = include_str!("../migrations/002_canvas_preview.sql");
-    conn.execute_batch(migration_002)?;
+    // Run additional migrations (only if column doesn't exist)
+    let has_preview: bool = conn.query_row(
+        "SELECT COUNT(*) > 0 FROM pragma_table_info('canvases') WHERE name = 'preview'",
+        [],
+        |row| row.get(0),
+    )?;
+    if !has_preview {
+        conn.execute("ALTER TABLE canvases ADD COLUMN preview TEXT", [])?;
+    }
     Ok(())
 }
 
