@@ -637,7 +637,8 @@ body {
   position: absolute;
   bottom: calc(100% + 8px);
   left: 50%;
-  transform: translateX(-50%);
+  transform: translateX(-50%) translateY(8px);
+  opacity: 0;
   min-width: 100px;
   background: rgba(30, 30, 30, 0.98);
   border: 1px solid rgba(255, 255, 255, 0.1);
@@ -646,18 +647,12 @@ body {
   z-index: 100;
   backdrop-filter: blur(16px);
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
-  animation: fadeInUp 0.15s ease;
+  transition: opacity 0.15s ease, transform 0.15s ease;
 }
 
-@keyframes fadeInUp {
-  from {
-    opacity: 0;
-    transform: translateX(-50%) translateY(8px);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(-50%) translateY(0);
-  }
+.zoom-dropdown.visible {
+  transform: translateX(-50%) translateY(0);
+  opacity: 1;
 }
 
 .zoom-menu-item {

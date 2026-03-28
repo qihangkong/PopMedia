@@ -79,7 +79,7 @@ export default function ControlBar({
         {showZoomMenu && (
           <>
             <div className="zoom-menu-backdrop" onMouseDown={(e) => e.preventDefault()} onClick={() => setShowZoomMenu(false)} />
-            <div className="zoom-dropdown" onMouseDown={(e) => e.stopPropagation()}>
+            <div className={`zoom-dropdown ${showZoomMenu ? 'visible' : ''}`} onMouseDown={(e) => e.stopPropagation()}>
               {ZOOM_OPTIONS.map((option) => (
                 <button
                   key={option.value}
