@@ -226,26 +226,26 @@ pub fn update_canvas_preview(
 
 // ==================== Canvas Data Commands ====================
 
-/// Save canvas data to file
+/// Save canvas data to file (async to avoid blocking the main thread)
 #[tauri::command]
-pub fn save_canvas_data(id: String, data: CanvasData) -> Result<String, String> {
+pub async fn save_canvas_data(id: String, data: CanvasData) -> Result<String, String> {
     let app_data = get_canvases_dir();
-    std::fs::create_dir_all(&app_data).map_err(|e| e.to_string())?;
+    tokio::fs::create_dir_all(&app_data).await.map_err(|e| e.to_string())?;
 
     let file_path = app_data.join(format!("{}.json", id));
     let json = serde_json::to_string_pretty(&data).map_err(|e| e.to_string())?;
-    std::fs::write(&file_path, json).map_err(|e| e.to_string())?;
+    tokio::fs::write(&file_path, json).await.map_err(|e| e.to_string())?;
 
     Ok(format!("Canvas '{}' saved successfully", id))
 }
 
-/// Load canvas data from file
+/// Load canvas data from file (async to avoid blocking the main thread)
 #[tauri::command]
-pub fn load_canvas_data(id: String) -> Result<CanvasData, String> {
+pub async fn load_canvas_data(id: String) -> Result<CanvasData, String> {
     let app_data = get_canvases_dir();
     let file_path = app_data.join(format!("{}.json", id));
     let content =
-        std::fs::read_to_string(&file_path).map_err(|e| format!("Failed to load canvas: {}", e))?;
+        tokio::fs::read_to_string(&file_path).await.map_err(|e| format!("Failed to load canvas: {}", e))?;
     let data: CanvasData =
         serde_json::from_str(&content).map_err(|e| format!("Failed to parse canvas: {}", e))?;
 
