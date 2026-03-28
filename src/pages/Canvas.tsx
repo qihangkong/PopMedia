@@ -25,7 +25,7 @@ import HeaderBar from '../components/HeaderBar'
 import Sidebar from '../components/Sidebar'
 import ControlBar from '../components/ControlBar'
 import ChatDrawer from '../components/ChatDrawer'
-import { NodeTypeIcon } from '../icons'
+import { NodeTypeIcon, EditIcon, CheckIcon, CloseIcon } from '../icons'
 import { NODE_TYPE_MAP } from '../nodeTypes'
 import {
   NODE_WIDTH,
@@ -127,6 +127,8 @@ function BaseNode({ data, selected, id }: { data: { label: string; type: string;
   const [displayImageUrl, setDisplayImageUrl] = useState(data.imageUrl || '')
   const [displayVideoUrl, setDisplayVideoUrl] = useState(data.videoUrl || '')
   const [displayAudioUrl, setDisplayAudioUrl] = useState(data.audioUrl || '')
+  const [isEditingLabel, setIsEditingLabel] = useState(false)
+  const labelInputRef = useRef<HTMLInputElement>(null)
 
   // 当 imageUrl 变为文件路径时，自动转换为 data URL
   useEffect(() => {
@@ -337,10 +339,13 @@ function BaseNode({ data, selected, id }: { data: { label: string; type: string;
         <div className={`node-header ${type}-header`}>
           <NodeTypeIcon type={type} />
           <input
+            ref={labelInputRef}
             className={`node-label-input ${type}-label-input`}
             defaultValue={data.label || meta?.label}
+            readOnly={!isEditingLabel}
             onBlur={(e) => {
               const newLabel = e.target.value
+              setIsEditingLabel(false)
               if (newLabel === data.label) return
               setNodes((nds) =>
                 nds.map((node) => {
@@ -351,7 +356,35 @@ function BaseNode({ data, selected, id }: { data: { label: string; type: string;
                 })
               )
             }}
+            onClick={(e) => {
+              if (isEditingLabel) e.stopPropagation()
+            }}
           />
+          <button
+            className="node-edit-btn"
+            title={isEditingLabel ? '完成编辑' : '编辑名称'}
+            onClick={(e) => {
+              e.stopPropagation()
+              if (isEditingLabel) {
+                labelInputRef.current?.blur()
+              } else {
+                setIsEditingLabel(true)
+                setTimeout(() => labelInputRef.current?.select(), 0)
+              }
+            }}
+          >
+            {isEditingLabel ? <CheckIcon /> : <EditIcon />}
+          </button>
+          <button
+            className="node-delete-btn"
+            title="删除节点"
+            onClick={(e) => {
+              e.stopPropagation()
+              setNodes((nds) => nds.filter((n) => n.id !== id))
+            }}
+          >
+            <CloseIcon />
+          </button>
         </div>
         <Handle
           type="target"
