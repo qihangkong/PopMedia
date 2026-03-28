@@ -1,4 +1,5 @@
 pub mod canvas;
+pub mod chat;
 pub mod connections;
 pub mod projects;
 pub mod settings;
@@ -12,6 +13,7 @@ pub struct AppState {
 }
 
 pub use canvas::*;
+pub use chat::*;
 pub use connections::*;
 pub use projects::*;
 pub use settings::*;

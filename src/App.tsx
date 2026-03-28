@@ -4,14 +4,17 @@ import { Home, Projects, Canvas, Settings } from './pages'
 import { isTauri, getAppInfo } from './utils/tauriApi'
 import { initWindowManager } from './utils/windowManager'
 import { useEffect } from 'react'
+import { ChatProvider } from './contexts/ChatContext'
 
 const isDev = import.meta.env.DEV
 
 function CanvasWithProvider() {
   return (
-    <ReactFlowProvider>
-      <Canvas />
-    </ReactFlowProvider>
+    <ChatProvider>
+      <ReactFlowProvider>
+        <Canvas />
+      </ReactFlowProvider>
+    </ChatProvider>
   )
 }
 

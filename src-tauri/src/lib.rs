@@ -82,6 +82,8 @@ pub fn run() {
             commands::upload_media,
             commands::upload_file,
             commands::get_asset_path,
+            // Chat
+            commands::send_chat_message,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

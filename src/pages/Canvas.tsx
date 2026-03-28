@@ -24,6 +24,7 @@ import '@xyflow/react/dist/style.css'
 import HeaderBar from '../components/HeaderBar'
 import Sidebar from '../components/Sidebar'
 import ControlBar from '../components/ControlBar'
+import ChatDrawer from '../components/ChatDrawer'
 import { NodeTypeIcon } from '../icons'
 import { NODE_TYPE_MAP } from '../nodeTypes'
 import {
@@ -1071,6 +1072,9 @@ export default function Canvas() {
           />
         </div>
       )}
+
+      {/* AI 聊天抽屉 */}
+      <ChatDrawer />
     </div>
   )
 }

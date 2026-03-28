@@ -8,9 +8,9 @@ import {
   FolderOpenIcon,
   HistoryIcon,
   QuestionIcon,
-  MessageIcon,
 } from '../icons'
 import { NODE_TYPES_META } from '../nodeTypes'
+import { useChat } from '../contexts/ChatContext'
 
 interface SidebarProps {
   onAddNode: (type: string) => void
@@ -18,6 +18,7 @@ interface SidebarProps {
 
 export default function Sidebar({ onAddNode }: SidebarProps) {
   const [showAddMenu, setShowAddMenu] = useState(false)
+  const { toggleChat, isOpen } = useChat()
 
   // 节点类型菜单 — 从 nodeTypes.ts 统一导入
   const nodeMenuItems = NODE_TYPES_META
@@ -122,8 +123,10 @@ export default function Sidebar({ onAddNode }: SidebarProps) {
       </button>
 
       {/* 联系客服 */}
-      <button className="sidebar-btn" aria-label="联系客服">
-        <MessageIcon />
+      <button className={`sidebar-btn ${isOpen ? 'active' : ''}`} aria-label="AI 助手" onClick={toggleChat}>
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+        </svg>
       </button>
     </div>
   )
