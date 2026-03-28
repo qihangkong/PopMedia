@@ -286,14 +286,16 @@ export default function Canvas() {
         />
       </ReactFlow>
 
-      <NodeContextMenu
-        nodeId={contextMenu?.nodeId ?? ''}
-        nodeType={contextMenu?.nodeType ?? ''}
-        x={contextMenu?.x ?? 0}
-        y={contextMenu?.y ?? 0}
-        onUploadMedia={handleUploadMedia}
-        onClose={() => setContextMenu(null)}
-      />
+      {contextMenu && (
+        <NodeContextMenu
+          nodeId={contextMenu.nodeId}
+          nodeType={contextMenu.nodeType}
+          x={contextMenu.x}
+          y={contextMenu.y}
+          onUploadMedia={handleUploadMedia}
+          onClose={() => setContextMenu(null)}
+        />
+      )}
 
       <ImagePreviewModal imageUrl={previewImage} onClose={() => setPreviewImage(null)} />
       <VideoPreviewModal videoUrl={previewVideo} onClose={() => setPreviewVideo(null)} />
