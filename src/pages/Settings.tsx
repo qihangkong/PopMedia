@@ -145,7 +145,7 @@ export default function Settings() {
     }
     try {
       await saveLlmConfig(newConfig)
-      setLlmConfigs([...llmConfigs, newConfig])
+      setLlmConfigs(prev => [...prev, newConfig])
       setEditingId(newConfig.id)
       invalidateLlmConfigCache()
     } catch (error) {
@@ -173,7 +173,7 @@ export default function Settings() {
   const handleDeleteLLM = async (id: string) => {
     try {
       await deleteLlmConfig(id)
-      setLlmConfigs(llmConfigs.filter(config => config.id !== id))
+      setLlmConfigs(prev => prev.filter(config => config.id !== id))
     } catch (error) {
       console.error('Failed to delete LLM config:', error)
     }
@@ -182,7 +182,7 @@ export default function Settings() {
   const handleDeleteComfyUI = async (id: string) => {
     try {
       await deleteComfyuiConfig(id)
-      setComfyuiConfigs(comfyuiConfigs.filter(config => config.id !== id))
+      setComfyuiConfigs(prev => prev.filter(config => config.id !== id))
     } catch (error) {
       console.error('Failed to delete ComfyUI config:', error)
     }
@@ -201,7 +201,7 @@ export default function Settings() {
     if (!config) return
 
     const updatedConfig = { ...config, [field]: value, connectionStatus: 'untested' as ConnectionStatus }
-    setLlmConfigs(llmConfigs.map(c => c.id === id ? updatedConfig : c))
+    setLlmConfigs(prev => prev.map(c => c.id === id ? updatedConfig : c))
 
     try {
       await saveLlmConfig(updatedConfig)
@@ -216,7 +216,7 @@ export default function Settings() {
     if (!config) return
 
     const updatedConfig = { ...config, [field]: value, connectionStatus: 'untested' as ConnectionStatus }
-    setComfyuiConfigs(comfyuiConfigs.map(c => c.id === id ? updatedConfig : c))
+    setComfyuiConfigs(prev => prev.map(c => c.id === id ? updatedConfig : c))
 
     try {
       await saveComfyuiConfig(updatedConfig)
@@ -230,19 +230,19 @@ export default function Settings() {
       const config = llmConfigs.find(c => c.id === id)
       if (!config) return
 
-      // Update status to testing
-      setLlmConfigs(llmConfigs.map(c =>
+      // Update status to testing - use functional update to avoid stale state
+      setLlmConfigs(prev => prev.map(c =>
         c.id === id ? { ...c, connectionStatus: 'testing' as ConnectionStatus, connectionMessage: undefined } : c
       ))
 
       try {
         const result = await testLlmConnection(config)
-        setLlmConfigs(llmConfigs.map(c =>
+        setLlmConfigs(prev => prev.map(c =>
           c.id === id ? { ...c, connectionStatus: 'success' as ConnectionStatus, connectionMessage: result } : c
         ))
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : String(error)
-        setLlmConfigs(llmConfigs.map(c =>
+        setLlmConfigs(prev => prev.map(c =>
           c.id === id ? { ...c, connectionStatus: 'failed' as ConnectionStatus, connectionMessage: errorMessage } : c
         ))
       }
@@ -250,19 +250,19 @@ export default function Settings() {
       const config = comfyuiConfigs.find(c => c.id === id)
       if (!config) return
 
-      // Update status to testing
-      setComfyuiConfigs(comfyuiConfigs.map(c =>
+      // Update status to testing - use functional update to avoid stale state
+      setComfyuiConfigs(prev => prev.map(c =>
         c.id === id ? { ...c, connectionStatus: 'testing' as ConnectionStatus, connectionMessage: undefined } : c
       ))
 
       try {
         const result = await testComfyuiConnection(config)
-        setComfyuiConfigs(comfyuiConfigs.map(c =>
+        setComfyuiConfigs(prev => prev.map(c =>
           c.id === id ? { ...c, connectionStatus: 'success' as ConnectionStatus, connectionMessage: result } : c
         ))
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : String(error)
-        setComfyuiConfigs(comfyuiConfigs.map(c =>
+        setComfyuiConfigs(prev => prev.map(c =>
           c.id === id ? { ...c, connectionStatus: 'failed' as ConnectionStatus, connectionMessage: errorMessage } : c
         ))
       }
