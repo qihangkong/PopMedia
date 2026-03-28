@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 
 interface HeaderBarProps {
@@ -10,6 +10,27 @@ export default function HeaderBar({ canvasName = '', onCanvasNameChange }: Heade
   const navigate = useNavigate()
   const location = useLocation()
   const [showBrandMenu, setShowBrandMenu] = useState(false)
+  const brandRef = useRef<HTMLDivElement>(null)
+
+  // 点击外部关闭品牌菜单
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (brandRef.current && !brandRef.current.contains(e.target as Node)) {
+        setShowBrandMenu(false)
+      }
+    }
+    const handleCloseMenus = () => setShowBrandMenu(false)
+
+    if (showBrandMenu) {
+      document.addEventListener('mousedown', handleClickOutside)
+    }
+    window.addEventListener('closeAllMenus', handleCloseMenus)
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+      window.removeEventListener('closeAllMenus', handleCloseMenus)
+    }
+  }, [showBrandMenu])
 
   const menuItems = [
     { path: '/', label: 'Home', icon: 'home' },
@@ -52,7 +73,7 @@ export default function HeaderBar({ canvasName = '', onCanvasNameChange }: Heade
 
   return (
     <div className="canvas-header-bar">
-      <div className="canvas-header-inner">
+      <div className="canvas-header-inner" ref={brandRef}>
         <img className="canvas-header-icon" src="/PopMedia.png" alt="PopMedia" />
         <button
           className="canvas-header-brand"
@@ -79,7 +100,7 @@ export default function HeaderBar({ canvasName = '', onCanvasNameChange }: Heade
       </div>
       {/* 品牌下拉菜单 */}
       {showBrandMenu && (
-        <div className="brand-dropdown">
+        <div className="brand-dropdown" onMouseDown={(e) => e.stopPropagation()}>
           {menuItems.map((item) => (
             <button
               key={item.path}

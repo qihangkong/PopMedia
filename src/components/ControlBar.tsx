@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 
 import { ZOOM_OPTIONS } from '../constants'
 import { MapIcon, GridIcon, MinusIcon, PlusIcon14, ChevronDownIcon } from '../icons'
@@ -25,6 +25,27 @@ export default function ControlBar({
   snapToGrid,
 }: ControlBarProps) {
   const [showZoomMenu, setShowZoomMenu] = useState(false)
+  const zoomRef = useRef<HTMLDivElement>(null)
+
+  // 点击外部关闭缩放菜单
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (zoomRef.current && !zoomRef.current.contains(e.target as Node)) {
+        setShowZoomMenu(false)
+      }
+    }
+    const handleCloseMenus = () => setShowZoomMenu(false)
+
+    if (showZoomMenu) {
+      document.addEventListener('mousedown', handleClickOutside)
+    }
+    window.addEventListener('closeAllMenus', handleCloseMenus)
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+      window.removeEventListener('closeAllMenus', handleCloseMenus)
+    }
+  }, [showZoomMenu])
 
   return (
     <div className="canvas-controls">
@@ -54,7 +75,7 @@ export default function ControlBar({
       </button>
 
       {/* Zoom Level Dropdown */}
-      <div className="zoom-dropdown-wrapper">
+      <div className="zoom-dropdown-wrapper" ref={zoomRef}>
         <button
           className="controls-btn zoom-level"
           aria-label="缩放选项"
@@ -66,8 +87,8 @@ export default function ControlBar({
 
         {showZoomMenu && (
           <>
-            <div className="zoom-menu-backdrop" onClick={() => setShowZoomMenu(false)} />
-            <div className="zoom-dropdown">
+            <div className="zoom-menu-backdrop" onMouseDown={(e) => e.preventDefault()} onClick={() => setShowZoomMenu(false)} />
+            <div className="zoom-dropdown" onMouseDown={(e) => e.stopPropagation()}>
               {ZOOM_OPTIONS.map((option) => (
                 <button
                   key={option.value}

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 
 import {
   PlusIcon,
@@ -19,6 +19,27 @@ interface SidebarProps {
 export default function Sidebar({ onAddNode }: SidebarProps) {
   const [showAddMenu, setShowAddMenu] = useState(false)
   const { toggleChat, isOpen } = useChat()
+  const addMenuRef = useRef<HTMLDivElement>(null)
+
+  // 点击外部关闭添加节点菜单
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (addMenuRef.current && !addMenuRef.current.contains(e.target as Node)) {
+        setShowAddMenu(false)
+      }
+    }
+    const handleCloseMenus = () => setShowAddMenu(false)
+
+    if (showAddMenu) {
+      document.addEventListener('mousedown', handleClickOutside)
+    }
+    window.addEventListener('closeAllMenus', handleCloseMenus)
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+      window.removeEventListener('closeAllMenus', handleCloseMenus)
+    }
+  }, [showAddMenu])
 
   // 节点类型菜单 — 从 nodeTypes.ts 统一导入
   const nodeMenuItems = NODE_TYPES_META
@@ -31,7 +52,7 @@ export default function Sidebar({ onAddNode }: SidebarProps) {
   return (
     <div className="canvas-sidebar">
       {/* Add Node Button with Dropdown */}
-      <div className="sidebar-add-wrapper">
+      <div className="sidebar-add-wrapper" ref={addMenuRef}>
         <button
           className={`sidebar-btn add-btn ${showAddMenu ? 'active' : ''}`}
           aria-label="添加节点"
@@ -45,11 +66,12 @@ export default function Sidebar({ onAddNode }: SidebarProps) {
             {/* Backdrop */}
             <div
               className="add-menu-backdrop"
+              onMouseDown={(e) => e.preventDefault()}
               onClick={() => setShowAddMenu(false)}
             />
 
             {/* Dropdown Menu */}
-            <div className="add-menu-dropdown">
+            <div className="add-menu-dropdown" onMouseDown={(e) => e.stopPropagation()}>
               <h4 className="add-menu-title">添加节点</h4>
 
               {nodeMenuItems.map((node) => (

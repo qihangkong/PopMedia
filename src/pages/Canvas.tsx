@@ -1006,6 +1006,10 @@ export default function Canvas() {
         proOptions={{ hideAttribution: true }}
         defaultEdgeOptions={{ type: 'bezier' }}
         style={{ background: '#1a1a1a', position: 'relative' }}
+        onPaneClick={() => {
+          // 点击画布空白处时，广播关闭菜单事件
+          window.dispatchEvent(new CustomEvent('closeAllMenus'))
+        }}
       >
         <Background
           variant={BackgroundVariant.Dots}
