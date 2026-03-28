@@ -790,11 +790,27 @@ body {
   font-size: 14px;
   font-family: inherit;
   cursor: text;
-  padding: 0;
+  padding: 0 4px;
+  border: none;
   border-radius: 2px;
   outline: none;
   transition: color 0.15s ease;
   white-space: nowrap;
+  background: transparent;
+  overflow: visible;
+  display: inline-block;
+  min-width: 20px;
+}
+
+.canvas-header-canvas-name[type="text"] {
+  -webkit-appearance: none;
+  appearance: none;
+  box-sizing: border-box;
+}
+
+.canvas-header-canvas-name:focus {
+  color: #fff;
+  background: transparent;
 }
 
 .canvas-header-canvas-name:hover {

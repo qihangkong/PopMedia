@@ -10,7 +10,33 @@ export default function HeaderBar({ canvasName = '', onCanvasNameChange }: Heade
   const navigate = useNavigate()
   const location = useLocation()
   const [showBrandMenu, setShowBrandMenu] = useState(false)
+  const [localCanvasName, setLocalCanvasName] = useState(canvasName)
   const brandRef = useRef<HTMLDivElement>(null)
+  const canvasNameInputRef = useRef<HTMLInputElement>(null)
+  const measureRef = useRef<HTMLSpanElement>(null)
+
+  useEffect(() => {
+    setLocalCanvasName(canvasName)
+  }, [canvasName])
+
+  const measureTextWidth = (text: string) => {
+    if (measureRef.current) {
+      measureRef.current.textContent = text || '未命名的画布'
+      return measureRef.current.offsetWidth + 10
+    }
+    return 100
+  }
+
+  const adjustInputWidth = (text: string) => {
+    if (canvasNameInputRef.current) {
+      const width = measureTextWidth(text)
+      canvasNameInputRef.current.style.width = `${width}px`
+    }
+  }
+
+  useEffect(() => {
+    adjustInputWidth(localCanvasName)
+  }, [localCanvasName])
 
   // 点击外部关闭品牌菜单
   useEffect(() => {
@@ -83,15 +109,30 @@ export default function HeaderBar({ canvasName = '', onCanvasNameChange }: Heade
         </button>
         <span className="canvas-header-sep">|</span>
         {location.pathname === '/canvas' ? (
-          <span
-            className="canvas-header-canvas-name"
-            contentEditable
-            suppressContentEditableWarning
-            onBlur={(e) => onCanvasNameChange?.(e.currentTarget.textContent || '')}
-            onClick={(e) => e.stopPropagation()}
-          >
-            {canvasName || '未命名的画布'}
-          </span>
+          <>
+            <input
+              ref={canvasNameInputRef}
+              type="text"
+              className="canvas-header-canvas-name"
+              value={localCanvasName}
+              onChange={(e) => {
+                setLocalCanvasName(e.target.value)
+                adjustInputWidth(e.target.value)
+              }}
+              onBlur={() => onCanvasNameChange?.(localCanvasName)}
+              onClick={(e) => e.stopPropagation()}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.currentTarget.blur()
+                }
+              }}
+            />
+            <span
+              ref={measureRef}
+              className="canvas-header-canvas-name"
+              style={{ position: 'absolute', visibility: 'hidden', pointerEvents: 'none' }}
+            />
+          </>
         ) : (
           <span className="canvas-header-canvas-name">
             {menuItems.find(item => item.path === location.pathname)?.label || ''}
