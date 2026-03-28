@@ -169,6 +169,34 @@ pub fn delete_canvas_by_id(id: String, state: tauri::State<AppState>) -> Result<
     Ok(format!("Canvas '{}' deleted", id))
 }
 
+/// Get a single canvas by ID
+#[tauri::command]
+pub fn get_canvas_by_id(id: String, state: tauri::State<AppState>) -> Result<CanvasInfo, String> {
+    let conn = state.db.lock().map_err(|e| e.to_string())?;
+    let mut stmt = conn
+        .prepare(
+            "SELECT id, name, thumbnail, preview, project_id, created_at, updated_at
+             FROM canvases WHERE id = ?1",
+        )
+        .map_err(|e| e.to_string())?;
+
+    let canvas = stmt
+        .query_row(params![id], |row| {
+            Ok(CanvasInfo {
+                id: row.get(0)?,
+                name: row.get(1)?,
+                thumbnail: row.get(2)?,
+                preview: row.get(3)?,
+                project_id: row.get(4)?,
+                created_at: row.get(5)?,
+                updated_at: row.get(6)?,
+            })
+        })
+        .map_err(|e| e.to_string())?;
+
+    Ok(canvas)
+}
+
 /// Update canvas preview (JSON array of media paths)
 #[tauri::command]
 pub fn update_canvas_preview(

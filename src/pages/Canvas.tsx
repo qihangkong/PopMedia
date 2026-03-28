@@ -40,7 +40,7 @@ import {
   MAX_ZOOM,
   FIT_VIEW_PADDING,
 } from '../constants'
-import { saveCanvasData, loadCanvasData, saveCanvasMeta, updateCanvasPreview, uploadFile, getFileUrl } from '../utils/tauriApi'
+import { saveCanvasData, loadCanvasData, saveCanvasMeta, updateCanvasPreview, uploadFile, getFileUrl, getCanvasById } from '../utils/tauriApi'
 
 // Convert stored media path to displayable URL
 async function mediaPathToUrl(path: string): Promise<string> {
@@ -903,6 +903,15 @@ export default function Canvas() {
 
   // 加载画布数据
   const loadCanvas = useCallback(async (id: string) => {
+    // Load canvas meta (name) first
+    try {
+      const meta = await getCanvasById(id)
+      setCanvasName(meta.name)
+    } catch (err) {
+      console.log('[Canvas] No meta found for:', id)
+    }
+
+    // Load canvas data (nodes, edges, viewport)
     try {
       const data = await loadCanvasData(id)
 
@@ -924,7 +933,7 @@ export default function Canvas() {
     } catch (err) {
       console.log('[Canvas] No existing data or load failed, starting fresh')
     }
-  }, [setNodes, setEdges, setViewport, fitView])
+  }, [setNodes, setEdges, setViewport, setCanvasName, fitView])
 
   // 初始化画布ID
   useEffect(() => {

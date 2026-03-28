@@ -73,6 +73,7 @@ pub fn run() {
             commands::delete_project_by_id,
             commands::get_canvases_by_project,
             commands::get_all_canvases,
+            commands::get_canvas_by_id,
             commands::save_canvas_meta,
             commands::delete_canvas_by_id,
             commands::update_canvas_preview,

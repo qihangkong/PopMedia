@@ -144,6 +144,11 @@ export async function getCanvasesByProject(projectId: string): Promise<CanvasInf
   return await invoke<CanvasInfo[]>('get_canvases_by_project', { projectId })
 }
 
+// Get a single canvas by ID
+export async function getCanvasById(id: string): Promise<CanvasInfo> {
+  return await invoke<CanvasInfo>('get_canvas_by_id', { id })
+}
+
 // Save or update a canvas
 export async function saveCanvasMeta(canvas: CanvasInfo): Promise<CanvasInfo> {
   return await invoke<CanvasInfo>('save_canvas_meta', { canvas })
