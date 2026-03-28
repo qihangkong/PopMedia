@@ -25,6 +25,7 @@ import HeaderBar from '../components/HeaderBar'
 import Sidebar from '../components/Sidebar'
 import ControlBar from '../components/ControlBar'
 import ChatDrawer from '../components/ChatDrawer'
+import { useMediaUrl } from '../hooks/useMediaUrl'
 import { NodeTypeIcon, EditIcon, CheckIcon, CloseIcon } from '../icons'
 import { NODE_TYPE_MAP } from '../nodeTypes'
 import {
@@ -40,12 +41,7 @@ import {
   MAX_ZOOM,
   FIT_VIEW_PADDING,
 } from '../constants'
-import { saveCanvasData, loadCanvasData, saveCanvasMeta, updateCanvasPreview, uploadFile, getFileUrl, getCanvasById } from '../utils/tauriApi'
-
-// Convert stored media path to displayable URL
-async function mediaPathToUrl(path: string): Promise<string> {
-  return await getFileUrl(path)
-}
+import { saveCanvasData, loadCanvasData, saveCanvasMeta, updateCanvasPreview, uploadFile, getCanvasById } from '../utils/tauriApi'
 
 // 生成UUID
 function generateUUID(): string {
@@ -124,38 +120,13 @@ function BaseNode({ data, selected, id }: { data: { label: string; type: string;
   const { setNodes } = useReactFlow()
   const type = data.type || 'text'
   const meta = NODE_TYPE_MAP[type]
-  const [displayImageUrl, setDisplayImageUrl] = useState(data.imageUrl || '')
-  const [displayVideoUrl, setDisplayVideoUrl] = useState(data.videoUrl || '')
-  const [displayAudioUrl, setDisplayAudioUrl] = useState(data.audioUrl || '')
   const [isEditingLabel, setIsEditingLabel] = useState(false)
   const labelInputRef = useRef<HTMLInputElement>(null)
 
-  // 当 imageUrl 变为文件路径时，自动转换为 data URL
-  useEffect(() => {
-    if (data.imageUrl?.startsWith('assets/')) {
-      mediaPathToUrl(data.imageUrl).then(setDisplayImageUrl)
-    } else {
-      setDisplayImageUrl(data.imageUrl || '')
-    }
-  }, [data.imageUrl])
-
-  // 当 videoUrl 变为文件路径时，自动转换为 data URL
-  useEffect(() => {
-    if (data.videoUrl?.startsWith('assets/')) {
-      mediaPathToUrl(data.videoUrl).then(setDisplayVideoUrl)
-    } else {
-      setDisplayVideoUrl(data.videoUrl || '')
-    }
-  }, [data.videoUrl])
-
-  // 当 audioUrl 变为文件路径时，自动转换为 data URL
-  useEffect(() => {
-    if (data.audioUrl?.startsWith('assets/')) {
-      mediaPathToUrl(data.audioUrl).then(setDisplayAudioUrl)
-    } else {
-      setDisplayAudioUrl(data.audioUrl || '')
-    }
-  }, [data.audioUrl])
+  // 使用 useMediaUrl hook 转换媒体路径，避免重复转换
+  const displayImageUrl = useMediaUrl(data.imageUrl)
+  const displayVideoUrl = useMediaUrl(data.videoUrl)
+  const displayAudioUrl = useMediaUrl(data.audioUrl)
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const onResize = useCallback((nodeId: string, width: number, height: number) => {
@@ -251,68 +222,33 @@ function BaseNode({ data, selected, id }: { data: { label: string; type: string;
     [setNodes, id]
   )
 
-  // 处理图片上传
-  const handleImageUpload = useCallback(
-    async (e: React.ChangeEvent<HTMLInputElement>) => {
+  // 统一的媒体上传处理
+  const handleMediaUpload = useCallback(
+    async (e: React.ChangeEvent<HTMLInputElement>, field: 'imageUrl' | 'videoUrl' | 'audioUrl') => {
       const file = e.target.files?.[0]
-      if (file) {
-        setUploading(true)
-        try {
-          const arrayBuffer = await file.arrayBuffer()
-          const bytes = new Uint8Array(arrayBuffer)
-          const path = await uploadFile(file.name, bytes)
-          console.log('[Canvas] handleImageUpload: uploaded to', path)
-          // 保存文件路径，显示时会通过 mediaPathToUrl 转换
+      if (!file) return
+
+      setUploading(true)
+      try {
+        const arrayBuffer = await file.arrayBuffer()
+        const bytes = new Uint8Array(arrayBuffer)
+        const path = await uploadFile(file.name, bytes)
+        console.log(`[Canvas] handleMediaUpload (${field}): uploaded to`, path)
+
+        // 根据字段更新对应的 URL
+        if (field === 'imageUrl') {
           updateImageUrl(path)
-        } finally {
-          setUploading(false)
-        }
-      }
-      e.target.value = ''
-    },
-    [updateImageUrl]
-  )
-
-  // 处理视频上传
-  const handleVideoUpload = useCallback(
-    async (e: React.ChangeEvent<HTMLInputElement>) => {
-      const file = e.target.files?.[0]
-      if (file) {
-        setUploading(true)
-        try {
-          const arrayBuffer = await file.arrayBuffer()
-          const bytes = new Uint8Array(arrayBuffer)
-          const path = await uploadFile(file.name, bytes)
-          // 保存文件路径，显示时会通过 mediaPathToUrl 转换
+        } else if (field === 'videoUrl') {
           updateVideoUrl(path)
-        } finally {
-          setUploading(false)
-        }
-      }
-      e.target.value = ''
-    },
-    [updateVideoUrl]
-  )
-
-  // 处理音频上传
-  const handleAudioUpload = useCallback(
-    async (e: React.ChangeEvent<HTMLInputElement>) => {
-      const file = e.target.files?.[0]
-      if (file) {
-        setUploading(true)
-        try {
-          const arrayBuffer = await file.arrayBuffer()
-          const bytes = new Uint8Array(arrayBuffer)
-          const path = await uploadFile(file.name, bytes)
-          // 保存文件路径，显示时会通过 mediaPathToUrl 转换
+        } else {
           updateAudioUrl(path)
-        } finally {
-          setUploading(false)
         }
+      } finally {
+        setUploading(false)
       }
       e.target.value = ''
     },
-    [updateAudioUrl]
+    [updateImageUrl, updateVideoUrl, updateAudioUrl]
   )
 
   // 触发预览事件
@@ -618,7 +554,7 @@ function BaseNode({ data, selected, id }: { data: { label: string; type: string;
             type="file"
             accept="image/*"
             style={{ display: 'none' }}
-            onChange={handleImageUpload}
+            onChange={(e) => handleMediaUpload(e, 'imageUrl')}
           />
         )}
         {isVideoNode && (
@@ -627,7 +563,7 @@ function BaseNode({ data, selected, id }: { data: { label: string; type: string;
             type="file"
             accept="video/*"
             style={{ display: 'none' }}
-            onChange={handleVideoUpload}
+            onChange={(e) => handleMediaUpload(e, 'videoUrl')}
           />
         )}
         {isAudioNode && (
@@ -636,7 +572,7 @@ function BaseNode({ data, selected, id }: { data: { label: string; type: string;
             type="file"
             accept="audio/*"
             style={{ display: 'none' }}
-            onChange={handleAudioUpload}
+            onChange={(e) => handleMediaUpload(e, 'audioUrl')}
           />
         )}
         <Handle
