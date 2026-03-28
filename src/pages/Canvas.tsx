@@ -212,10 +212,14 @@ export default function Canvas() {
       const viewport = getViewport()
       const x = (addNodeMenu.x - viewport.x) / viewport.zoom - NODE_WIDTH / 2
       const y = (addNodeMenu.y - viewport.y) / viewport.zoom - NODE_HEIGHT / 2
-      addNodeWithConnection(type, { x, y }, addNodeMenu.sourceNodeId, addNodeMenu.sourceHandleId)
+      if (addNodeMenu.sourceNodeId) {
+        addNodeWithConnection(type, { x, y }, addNodeMenu.sourceNodeId, addNodeMenu.sourceHandleId)
+      } else {
+        addNode(type, { x, y })
+      }
       setAddNodeMenu(null)
     },
-    [addNodeMenu, getViewport, addNodeWithConnection]
+    [addNodeMenu, getViewport, addNodeWithConnection, addNode]
   )
 
   const handleSelectionChange = useCallback((params: { nodes: { id: string }[] }) => {
@@ -230,6 +234,22 @@ export default function Canvas() {
     console.log('AI message for node:', selectedNodeId, message)
     // TODO: 实现 AI 发送逻辑
   }, [selectedNodeId])
+
+  const handlePaneContextMenu = useCallback((event: MouseEvent | React.MouseEvent) => {
+    event.preventDefault()
+    const target = event.target as HTMLElement
+    const isNodeClick = target.closest('.react-flow__node') !== null
+    if (!isNodeClick) {
+      const clientX = 'clientX' in event ? event.clientX : 0
+      const clientY = 'clientY' in event ? event.clientY : 0
+      setAddNodeMenu({
+        x: clientX,
+        y: clientY,
+        sourceNodeId: '',
+        sourceHandleId: '',
+      })
+    }
+  }, [])
 
   return (
     <div className="page-container">
@@ -263,6 +283,7 @@ export default function Canvas() {
         defaultEdgeOptions={{ type: 'bezier' }}
         style={{ background: '#1a1a1a', position: 'relative' }}
         onPaneClick={() => window.dispatchEvent(new CustomEvent('closeAllMenus'))}
+        onPaneContextMenu={handlePaneContextMenu}
         onSelectionChange={handleSelectionChange}
       >
         <Background
