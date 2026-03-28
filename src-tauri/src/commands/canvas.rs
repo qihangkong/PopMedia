@@ -1,3 +1,4 @@
+use crate::commands::HttpClient;
 use crate::models::{CanvasData, CanvasInfo, ProjectInfoData};
 use crate::AppState;
 use rusqlite::params;
@@ -28,7 +29,7 @@ pub fn get_projects(state: tauri::State<AppState>) -> Result<Vec<ProjectInfoData
         )
         .map_err(|e| e.to_string())?;
 
-    let projects = stmt
+    let projects: Vec<ProjectInfoData> = stmt
         .query_map([], |row| {
             Ok(ProjectInfoData {
                 id: row.get(0)?,
@@ -39,8 +40,11 @@ pub fn get_projects(state: tauri::State<AppState>) -> Result<Vec<ProjectInfoData
             })
         })
         .map_err(|e| e.to_string())?
-        .filter_map(|r| r.ok())
-        .collect();
+        .collect::<std::result::Result<Vec<_>, _>>()
+        .map_err(|e| {
+            log::error!("Failed to read projects: {}", e);
+            format!("Failed to read projects: {}", e)
+        })?;
 
     Ok(projects)
 }
@@ -88,7 +92,7 @@ pub fn get_canvases_by_project(
         )
         .map_err(|e| e.to_string())?;
 
-    let canvases = stmt
+    let canvases: Vec<CanvasInfo> = stmt
         .query_map(params![project_id], |row| {
             Ok(CanvasInfo {
                 id: row.get(0)?,
@@ -101,8 +105,11 @@ pub fn get_canvases_by_project(
             })
         })
         .map_err(|e| e.to_string())?
-        .filter_map(|r| r.ok())
-        .collect();
+        .collect::<std::result::Result<Vec<_>, _>>()
+        .map_err(|e| {
+            log::error!("Failed to read canvases: {}", e);
+            format!("Failed to read canvases: {}", e)
+        })?;
 
     Ok(canvases)
 }
@@ -118,7 +125,7 @@ pub fn get_all_canvases(state: tauri::State<AppState>) -> Result<Vec<CanvasInfo>
         )
         .map_err(|e| e.to_string())?;
 
-    let canvases = stmt
+    let canvases: Vec<CanvasInfo> = stmt
         .query_map([], |row| {
             Ok(CanvasInfo {
                 id: row.get(0)?,
@@ -131,8 +138,11 @@ pub fn get_all_canvases(state: tauri::State<AppState>) -> Result<Vec<CanvasInfo>
             })
         })
         .map_err(|e| e.to_string())?
-        .filter_map(|r| r.ok())
-        .collect();
+        .collect::<std::result::Result<Vec<_>, _>>()
+        .map_err(|e| {
+            log::error!("Failed to read canvases: {}", e);
+            format!("Failed to read canvases: {}", e)
+        })?;
 
     Ok(canvases)
 }
@@ -245,15 +255,18 @@ pub fn load_canvas_data(id: String) -> Result<CanvasData, String> {
 /// Upload media file and return local path
 /// Uses content-addressable storage: same content = same file (deduplication via SHA256 hash)
 #[tauri::command]
-pub async fn upload_media(url: String, filename: String) -> Result<String, String> {
+pub async fn upload_media(
+    url: String,
+    filename: String,
+    http_client: tauri::State<'_, HttpClient>,
+) -> Result<String, String> {
     use sha2::{Sha256, Digest};
 
     let uploads_dir = get_uploads_dir();
     std::fs::create_dir_all(&uploads_dir).map_err(|e| e.to_string())?;
 
     // Download from URL first
-    let client = reqwest::Client::new();
-    let response = client
+    let response = http_client
         .get(&url)
         .timeout(std::time::Duration::from_secs(30))
         .send()

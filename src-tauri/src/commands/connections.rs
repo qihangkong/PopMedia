@@ -1,9 +1,14 @@
+use crate::commands::http::extract_content_from_response;
 use crate::models::ComfyuiConfig;
 use crate::models::LlmConfig;
+use crate::commands::HttpClient;
 
 /// Test LLM API connection
 #[tauri::command]
-pub async fn test_llm_connection(config: LlmConfig) -> Result<String, String> {
+pub async fn test_llm_connection(
+    config: LlmConfig,
+    http_client: tauri::State<'_, HttpClient>,
+) -> Result<String, String> {
     log::info!("开始测试 LLM 连接: {}", config.name);
     log::info!("API URL: {}", config.api_url);
     log::info!("Model: {}", config.model_name);
@@ -13,13 +18,12 @@ pub async fn test_llm_connection(config: LlmConfig) -> Result<String, String> {
         return Err("API URL is required".to_string());
     }
 
-    let client = reqwest::Client::new();
     let api_url = config.api_url.trim_end_matches('/');
     log::info!("处理后的 API URL: {}/models", api_url);
 
     // Step 1: Check if /models endpoint is accessible
     log::info!("步骤 1: 检查 /models 端点...");
-    let models_response = client
+    let models_response = http_client
         .get(&format!("{}/models", api_url))
         .header("Authorization", format!("Bearer {}", config.api_key))
         .header("Content-Type", "application/json")
@@ -40,7 +44,10 @@ pub async fn test_llm_connection(config: LlmConfig) -> Result<String, String> {
 
     if !models_response.status().is_success() {
         let status = models_response.status();
-        let body = models_response.text().await.unwrap_or_default();
+        let body = models_response.text().await.map_err(|e| {
+            log::error!("读取响应体失败: {}", e);
+            format!("读取响应体失败: {}", e)
+        })?;
         log::error!("/models 响应错误, 状态码: {}, body: {}", status, body);
         return Err(format!("API 不可访问 ({}): {}", status, body));
     }
@@ -67,7 +74,7 @@ pub async fn test_llm_connection(config: LlmConfig) -> Result<String, String> {
     log::info!("步骤 2: 发送测试消息到 /chat/completions...");
     log::debug!("请求体: {}", request_body);
 
-    let chat_response = client
+    let chat_response = http_client
         .post(&format!("{}/chat/completions", api_url))
         .header("Authorization", format!("Bearer {}", config.api_key))
         .header("Content-Type", "application/json")
@@ -89,7 +96,10 @@ pub async fn test_llm_connection(config: LlmConfig) -> Result<String, String> {
 
     let status = chat_response.status();
     if !status.is_success() {
-        let body = chat_response.text().await.unwrap_or_default();
+        let body = chat_response.text().await.map_err(|e| {
+            log::error!("读取响应体失败: {}", e);
+            format!("读取响应体失败: {}", e)
+        })?;
         log::error!("chat/completions 响应错误, 状态码: {}, body: {}", status, body);
         return Err(format!("API 响应错误 ({}): {}", status, body));
     }
@@ -107,40 +117,7 @@ pub async fn test_llm_connection(config: LlmConfig) -> Result<String, String> {
 
     log::info!("响应体: {}", response_body);
 
-    // Try different response formats (OpenAI, Chinese APIs like 智谱AI)
-    let content = response_body
-        .get("choices")
-        .and_then(|c| c.as_array())
-        .and_then(|choices| choices.first())
-        .and_then(|choice| {
-            // Try message.content (OpenAI format)
-            choice
-                .get("message")
-                .and_then(|msg| {
-                    // First try content, then reasoning_content (智谱AI uses this)
-                    msg.get("content")
-                        .and_then(|c| c.as_str())
-                        .filter(|s| !s.is_empty())
-                        .or_else(|| {
-                            msg.get("reasoning_content")
-                                .and_then(|rc| rc.as_str())
-                                .filter(|s| !s.is_empty())
-                        })
-                })
-                .or_else(|| {
-                    // Try delta.content (streaming format)
-                    choice
-                        .get("delta")
-                        .and_then(|delta| delta.get("content"))
-                        .and_then(|c| c.as_str())
-                })
-                .or_else(|| {
-                    // Try text (some Chinese APIs)
-                    choice.get("text").and_then(|t| t.as_str())
-                })
-        });
-
-    if let Some(text) = content {
+    if let Some(text) = extract_content_from_response(&response_body) {
         if !text.is_empty() {
             log::info!("测试成功! AI 回复: {}", text);
             return Ok(format!("连接成功! API 回复: {}", text));
@@ -153,15 +130,17 @@ pub async fn test_llm_connection(config: LlmConfig) -> Result<String, String> {
 
 /// Test ComfyUI connection
 #[tauri::command]
-pub async fn test_comfyui_connection(config: ComfyuiConfig) -> Result<String, String> {
+pub async fn test_comfyui_connection(
+    config: ComfyuiConfig,
+    http_client: tauri::State<'_, HttpClient>,
+) -> Result<String, String> {
     if config.host.is_empty() {
         return Err("Host is required".to_string());
     }
 
-    let client = reqwest::Client::new();
     let url = format!("http://{}:{}/system_stats", config.host, config.port);
 
-    let response = client
+    let response = http_client
         .get(&url)
         .timeout(std::time::Duration::from_secs(10))
         .send()
@@ -172,7 +151,10 @@ pub async fn test_comfyui_connection(config: ComfyuiConfig) -> Result<String, St
         Ok("Connection successful!".to_string())
     } else {
         let status = response.status();
-        let body = response.text().await.unwrap_or_default();
+        let body = response.text().await.map_err(|e| {
+            log::error!("读取响应体失败: {}", e);
+            format!("读取响应体失败: {}", e)
+        })?;
         Err(format!("Connection failed: {} - {}", status, body))
     }
 }

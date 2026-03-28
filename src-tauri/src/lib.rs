@@ -2,6 +2,7 @@ mod commands;
 mod db;
 mod models;
 
+use commands::http::create_http_client;
 use commands::AppState;
 use db::{get_db_path, init_database};
 use std::sync::Mutex;
@@ -18,6 +19,7 @@ pub fn run() {
 
     let app_state = AppState {
         db: Mutex::new(conn),
+        http_client: create_http_client(),
     };
 
     tauri::Builder::default()

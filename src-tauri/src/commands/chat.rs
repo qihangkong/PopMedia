@@ -1,8 +1,13 @@
+use crate::commands::http::extract_content_from_response;
 use crate::models::LlmConfig;
 
 /// Send a chat message to the LLM and get a response
 #[tauri::command]
-pub async fn send_chat_message(config: LlmConfig, message: String) -> Result<String, String> {
+pub async fn send_chat_message(
+    config: LlmConfig,
+    message: String,
+    http_client: tauri::State<'_, crate::commands::HttpClient>,
+) -> Result<String, String> {
     log::info!("发送聊天消息到 LLM: {}", config.name);
 
     if config.api_url.is_empty() {
@@ -15,7 +20,6 @@ pub async fn send_chat_message(config: LlmConfig, message: String) -> Result<Str
         return Err("API Key is required".to_string());
     }
 
-    let client = reqwest::Client::new();
     let api_url = config.api_url.trim_end_matches('/');
 
     let model_name = if config.model_name.is_empty() {
@@ -35,12 +39,11 @@ pub async fn send_chat_message(config: LlmConfig, message: String) -> Result<Str
 
     log::info!("发送请求到 {}/chat/completions", api_url);
 
-    let response = client
+    let response = http_client
         .post(&format!("{}/chat/completions", api_url))
         .header("Authorization", format!("Bearer {}", config.api_key))
         .header("Content-Type", "application/json")
         .json(&request_body)
-        .timeout(std::time::Duration::from_secs(60))
         .send()
         .await
         .map_err(|e| {
@@ -50,7 +53,10 @@ pub async fn send_chat_message(config: LlmConfig, message: String) -> Result<Str
 
     let status = response.status();
     if !status.is_success() {
-        let body = response.text().await.unwrap_or_default();
+        let body = response.text().await.map_err(|e| {
+            log::error!("读取响应体失败: {}", e);
+            format!("读取响应体失败: {}", e)
+        })?;
         log::error!("API 响应错误, 状态码: {}, body: {}", status, body);
         return Err(format!("API 响应错误 ({}): {}", status, body));
     }
@@ -65,40 +71,7 @@ pub async fn send_chat_message(config: LlmConfig, message: String) -> Result<Str
 
     log::info!("收到响应: {}", response_body);
 
-    // Try different response formats (OpenAI, Chinese APIs like 智谱AI)
-    let content = response_body
-        .get("choices")
-        .and_then(|c| c.as_array())
-        .and_then(|choices| choices.first())
-        .and_then(|choice| {
-            // Try message.content (OpenAI format)
-            choice
-                .get("message")
-                .and_then(|msg| {
-                    // First try content, then reasoning_content (智谱AI uses this)
-                    msg.get("content")
-                        .and_then(|c| c.as_str())
-                        .filter(|s| !s.is_empty())
-                        .or_else(|| {
-                            msg.get("reasoning_content")
-                                .and_then(|rc| rc.as_str())
-                                .filter(|s| !s.is_empty())
-                        })
-                })
-                .or_else(|| {
-                    // Try delta.content (streaming format)
-                    choice
-                        .get("delta")
-                        .and_then(|delta| delta.get("content"))
-                        .and_then(|c| c.as_str())
-                })
-                .or_else(|| {
-                    // Try text (some Chinese APIs)
-                    choice.get("text").and_then(|t| t.as_str())
-                })
-        });
-
-    if let Some(text) = content {
+    if let Some(text) = extract_content_from_response(&response_body) {
         if !text.is_empty() {
             log::info!("成功收到 AI 回复");
             return Ok(text.to_string());

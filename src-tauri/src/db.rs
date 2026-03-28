@@ -27,8 +27,12 @@ pub fn init_database(conn: &Connection) -> SqliteResult<()> {
     let mut stmt = conn.prepare("SELECT version FROM schema_migrations")?;
     let applied: Vec<String> = stmt
         .query_map([], |row| row.get(0))?
-        .filter_map(|r| r.ok())
-        .collect();
+        .collect::<Result<Vec<String>, _>>()
+        .map_err(|e| {
+            log::warn!("Failed to read migration history, proceeding anyway: {}", e);
+            e
+        })
+        .unwrap_or_default();
     drop(stmt);
 
     // Apply embedded migrations in order

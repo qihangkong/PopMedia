@@ -10,7 +10,7 @@ pub fn get_llm_configs(state: tauri::State<AppState>) -> Result<Vec<LlmConfig>, 
         .prepare("SELECT id, name, api_url, api_key, model_name FROM llm_configs ORDER BY name")
         .map_err(|e| e.to_string())?;
 
-    let configs = stmt
+    let configs: Vec<LlmConfig> = stmt
         .query_map([], |row| {
             Ok(LlmConfig {
                 id: row.get(0)?,
@@ -21,8 +21,11 @@ pub fn get_llm_configs(state: tauri::State<AppState>) -> Result<Vec<LlmConfig>, 
             })
         })
         .map_err(|e| e.to_string())?
-        .filter_map(|r| r.ok())
-        .collect();
+        .collect::<std::result::Result<Vec<_>, _>>()
+        .map_err(|e| {
+            log::error!("Failed to read LLM configs: {}", e);
+            format!("Failed to read LLM configs: {}", e)
+        })?;
 
     Ok(configs)
 }
@@ -59,7 +62,7 @@ pub fn get_comfyui_configs(state: tauri::State<AppState>) -> Result<Vec<ComfyuiC
         .prepare("SELECT id, name, host, port FROM comfyui_configs ORDER BY name")
         .map_err(|e| e.to_string())?;
 
-    let configs = stmt
+    let configs: Vec<ComfyuiConfig> = stmt
         .query_map([], |row| {
             Ok(ComfyuiConfig {
                 id: row.get(0)?,
@@ -69,8 +72,11 @@ pub fn get_comfyui_configs(state: tauri::State<AppState>) -> Result<Vec<ComfyuiC
             })
         })
         .map_err(|e| e.to_string())?
-        .filter_map(|r| r.ok())
-        .collect();
+        .collect::<std::result::Result<Vec<_>, _>>()
+        .map_err(|e| {
+            log::error!("Failed to read ComfyUI configs: {}", e);
+            format!("Failed to read ComfyUI configs: {}", e)
+        })?;
 
     Ok(configs)
 }
