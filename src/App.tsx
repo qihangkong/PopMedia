@@ -5,6 +5,7 @@ import { isTauri, getAppInfo } from './utils/tauriApi'
 import { initWindowManager } from './utils/windowManager'
 import { useEffect } from 'react'
 import { ChatProvider } from './contexts/ChatContext'
+import { ErrorBoundary } from './components/ErrorBoundary'
 
 const isDev = import.meta.env.DEV
 
@@ -36,12 +37,14 @@ export default function App() {
 
   return (
     <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<Home />} />
-        <Route path="/projects" element={<Projects />} />
-        <Route path="/canvas" element={<CanvasWithProvider />} />
-        <Route path="/settings" element={<Settings />} />
-      </Routes>
+      <ErrorBoundary>
+        <Routes>
+          <Route path="/" element={<Home />} />
+          <Route path="/projects" element={<Projects />} />
+          <Route path="/canvas" element={<CanvasWithProvider />} />
+          <Route path="/settings" element={<Settings />} />
+        </Routes>
+      </ErrorBoundary>
     </BrowserRouter>
   )
 }

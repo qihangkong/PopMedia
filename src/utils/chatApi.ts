@@ -11,19 +11,39 @@ export interface SendChatOptions {
   config: LlmConfig
 }
 
+// Cache for LLM configs to avoid fetching on every message
+let cachedConfigs: LlmConfig[] | null = null
+let cacheTimestamp = 0
+const CACHE_TTL = 60 * 1000 // 1 minute cache
+
+async function getLlmConfigs(): Promise<LlmConfig[]> {
+  const now = Date.now()
+  if (cachedConfigs && now - cacheTimestamp < CACHE_TTL) {
+    return cachedConfigs
+  }
+  const configs = await invoke<LlmConfig[]>('get_llm_configs')
+  cachedConfigs = configs
+  cacheTimestamp = now
+  return configs
+}
+
+// Invalidate cache when settings change
+export function invalidateLlmConfigCache() {
+  cachedConfigs = null
+  cacheTimestamp = 0
+}
+
 /**
  * Send a chat message to the configured LLM and get a response
  */
 export async function sendChatMessage(content: string): Promise<string> {
   try {
-    // Get the first available LLM config
-    const configs = await invoke<LlmConfig[]>('get_llm_configs')
+    const configs = await getLlmConfigs()
 
     if (!configs || configs.length === 0) {
       throw new Error('请先在设置中配置 LLM API')
     }
 
-    // Use the first config for now
     const config = configs[0]
 
     if (!config.api_url || !config.api_key) {

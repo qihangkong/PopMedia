@@ -1,7 +1,8 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 
 import { ZOOM_OPTIONS } from '../constants'
 import { MapIcon, GridIcon, MinusIcon, PlusIcon14, ChevronDownIcon } from '../icons'
+import { useClickOutside } from '../hooks/useClickOutside'
 
 interface ControlBarProps {
   zoom: number
@@ -28,24 +29,14 @@ export default function ControlBar({
   const zoomRef = useRef<HTMLDivElement>(null)
 
   // 点击外部关闭缩放菜单
+  const handleCloseZoomMenu = useCallback(() => setShowZoomMenu(false), [])
+  useClickOutside(zoomRef, handleCloseZoomMenu, showZoomMenu)
+
   useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (zoomRef.current && !zoomRef.current.contains(e.target as Node)) {
-        setShowZoomMenu(false)
-      }
-    }
     const handleCloseMenus = () => setShowZoomMenu(false)
-
-    if (showZoomMenu) {
-      document.addEventListener('mousedown', handleClickOutside)
-    }
     window.addEventListener('closeAllMenus', handleCloseMenus)
-
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside)
-      window.removeEventListener('closeAllMenus', handleCloseMenus)
-    }
-  }, [showZoomMenu])
+    return () => window.removeEventListener('closeAllMenus', handleCloseMenus)
+  }, [])
 
   return (
     <div className="canvas-controls">

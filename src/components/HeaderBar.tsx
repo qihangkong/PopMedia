@@ -1,5 +1,6 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
+import { useClickOutside } from '../hooks/useClickOutside'
 
 interface HeaderBarProps {
   canvasName?: string
@@ -39,24 +40,14 @@ export default function HeaderBar({ canvasName = '', onCanvasNameChange }: Heade
   }, [localCanvasName])
 
   // 点击外部关闭品牌菜单
+  const handleCloseBrandMenu = useCallback(() => setShowBrandMenu(false), [])
+  useClickOutside(brandRef, handleCloseBrandMenu, showBrandMenu)
+
   useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (brandRef.current && !brandRef.current.contains(e.target as Node)) {
-        setShowBrandMenu(false)
-      }
-    }
     const handleCloseMenus = () => setShowBrandMenu(false)
-
-    if (showBrandMenu) {
-      document.addEventListener('mousedown', handleClickOutside)
-    }
     window.addEventListener('closeAllMenus', handleCloseMenus)
-
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside)
-      window.removeEventListener('closeAllMenus', handleCloseMenus)
-    }
-  }, [showBrandMenu])
+    return () => window.removeEventListener('closeAllMenus', handleCloseMenus)
+  }, [])
 
   const menuItems = [
     { path: '/', label: 'Home', icon: 'home' },

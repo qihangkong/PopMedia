@@ -975,12 +975,6 @@ export default function Canvas() {
     }
   }, [nodes, edges, canvasName, saveCanvas, isLoading])
 
-  // 监听画布名称变化时保存
-  useEffect(() => {
-    if (!isInitializedRef.current || isLoading) return
-    saveCanvas()
-  }, [canvasName])
-
   return (
     <div className="page-container">
       {isLoading && (

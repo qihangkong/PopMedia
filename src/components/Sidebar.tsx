@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 
 import {
   PlusIcon,
@@ -11,6 +11,7 @@ import {
 } from '../icons'
 import { NODE_TYPES_META } from '../nodeTypes'
 import { useChat } from '../contexts/ChatContext'
+import { useClickOutside } from '../hooks/useClickOutside'
 
 interface SidebarProps {
   onAddNode: (type: string) => void
@@ -22,24 +23,14 @@ export default function Sidebar({ onAddNode }: SidebarProps) {
   const addMenuRef = useRef<HTMLDivElement>(null)
 
   // 点击外部关闭添加节点菜单
+  const handleCloseAddMenu = useCallback(() => setShowAddMenu(false), [])
+  useClickOutside(addMenuRef, handleCloseAddMenu, showAddMenu)
+
   useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (addMenuRef.current && !addMenuRef.current.contains(e.target as Node)) {
-        setShowAddMenu(false)
-      }
-    }
     const handleCloseMenus = () => setShowAddMenu(false)
-
-    if (showAddMenu) {
-      document.addEventListener('mousedown', handleClickOutside)
-    }
     window.addEventListener('closeAllMenus', handleCloseMenus)
-
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside)
-      window.removeEventListener('closeAllMenus', handleCloseMenus)
-    }
-  }, [showAddMenu])
+    return () => window.removeEventListener('closeAllMenus', handleCloseMenus)
+  }, [])
 
   // 节点类型菜单 — 从 nodeTypes.ts 统一导入
   const nodeMenuItems = NODE_TYPES_META

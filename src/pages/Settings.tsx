@@ -12,6 +12,7 @@ import {
   testLlmConnection,
   testComfyuiConnection,
 } from '../utils/tauriApi'
+import { invalidateLlmConfigCache } from '../utils/chatApi'
 
 type ConnectionStatus = 'untested' | 'testing' | 'success' | 'failed'
 
@@ -146,6 +147,7 @@ export default function Settings() {
       await saveLlmConfig(newConfig)
       setLlmConfigs([...llmConfigs, newConfig])
       setEditingId(newConfig.id)
+      invalidateLlmConfigCache()
     } catch (error) {
       console.error('Failed to add LLM config:', error)
     }
@@ -203,6 +205,7 @@ export default function Settings() {
 
     try {
       await saveLlmConfig(updatedConfig)
+      invalidateLlmConfigCache()
     } catch (error) {
       console.error('Failed to save LLM config:', error)
     }
