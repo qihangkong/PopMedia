@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react'
+import { useCallback, useState, useRef } from 'react'
 import { useReactFlow } from '@xyflow/react'
 import {
   ReactFlow,
@@ -9,6 +9,8 @@ import {
   Position,
   EdgeProps,
   getBezierPath,
+  OnConnectStart,
+  OnConnectEnd,
 } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
 
@@ -21,12 +23,15 @@ import { ImageNode } from '../components/ImageNode'
 import { VideoNode } from '../components/VideoNode'
 import { AudioNode } from '../components/AudioNode'
 import { NodeContextMenu, ImagePreviewModal, VideoPreviewModal } from '../components/CanvasModals'
+import { AddNodeMenu } from '../components/AddNodeMenu'
 import {
   GRID_SIZE,
   GRID_SNAP,
   DEFAULT_ZOOM,
   MAX_ZOOM,
   FIT_VIEW_PADDING,
+  NODE_WIDTH,
+  NODE_HEIGHT,
 } from '../constants'
 import {
   useCanvasId,
@@ -114,6 +119,18 @@ export default function Canvas() {
   const [snapToGrid, setSnapToGrid] = useState(false)
   const [zoom, setZoom] = useState(DEFAULT_ZOOM)
 
+  // Add node menu state for connection drag
+  const [addNodeMenu, setAddNodeMenu] = useState<{
+    x: number
+    y: number
+    sourceNodeId: string
+    sourceHandleId: string
+  } | null>(null)
+  const pendingConnectionRef = useRef<{
+    sourceNodeId: string
+    sourceHandleId: string
+  } | null>(null)
+
   const { zoomIn, zoomOut, getViewport, setViewport } = useReactFlow()
   const {
     nodes,
@@ -123,6 +140,7 @@ export default function Canvas() {
     onConnect,
     isValidConnection,
     addNode,
+    addNodeWithConnection,
     loadCanvas,
     saveCanvas,
   } = useCanvasData()
@@ -152,6 +170,55 @@ export default function Canvas() {
     [getViewport, setViewport]
   )
 
+  // Handle connection drag start
+  const onConnectStart: OnConnectStart = useCallback((_, params) => {
+    if (params.nodeId && params.handleId) {
+      pendingConnectionRef.current = {
+        sourceNodeId: params.nodeId,
+        sourceHandleId: params.handleId,
+      }
+    }
+  }, [])
+
+  // Handle connection drag end - show menu if not connected to a target
+  const onConnectEnd: OnConnectEnd = useCallback(
+    (event: MouseEvent | TouchEvent | null) => {
+      // If we have a pending connection and the event target is the pane (not a node)
+      if (pendingConnectionRef.current && event) {
+        const target = event.target as HTMLElement
+        // Check if the click was on the pane itself (not on a node)
+        const isPaneClick = target.closest('.react-flow__pane') !== null
+        const isNodeClick = target.closest('.react-flow__node') !== null
+
+        if (isPaneClick && !isNodeClick) {
+          const clientX = 'touches' in event ? event.touches[0].clientX : event.clientX
+          const clientY = 'touches' in event ? event.touches[0].clientY : event.clientY
+          setAddNodeMenu({
+            x: clientX,
+            y: clientY,
+            sourceNodeId: pendingConnectionRef.current.sourceNodeId,
+            sourceHandleId: pendingConnectionRef.current.sourceHandleId,
+          })
+        }
+      }
+      pendingConnectionRef.current = null
+    },
+    []
+  )
+
+  const handleAddNodeFromMenu = useCallback(
+    (type: string) => {
+      if (!addNodeMenu) return
+      // Convert screen coordinates to flow coordinates
+      const viewport = getViewport()
+      const x = (addNodeMenu.x - viewport.x) / viewport.zoom - NODE_WIDTH / 2
+      const y = (addNodeMenu.y - viewport.y) / viewport.zoom - NODE_HEIGHT / 2
+      addNodeWithConnection(type, { x, y }, addNodeMenu.sourceNodeId, addNodeMenu.sourceHandleId)
+      setAddNodeMenu(null)
+    },
+    [addNodeMenu, getViewport, addNodeWithConnection]
+  )
+
   return (
     <div className="page-container">
       {isLoading && (
@@ -168,6 +235,8 @@ export default function Canvas() {
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
         onConnect={onConnect}
+        onConnectStart={onConnectStart}
+        onConnectEnd={onConnectEnd}
         onMoveEnd={handleMoveEnd}
         onDoubleClick={(e) => e.stopPropagation()}
         nodeTypes={nodeTypes}
@@ -228,6 +297,15 @@ export default function Canvas() {
 
       <ImagePreviewModal imageUrl={previewImage} onClose={() => setPreviewImage(null)} />
       <VideoPreviewModal videoUrl={previewVideo} onClose={() => setPreviewVideo(null)} />
+
+      {addNodeMenu && (
+        <AddNodeMenu
+          x={addNodeMenu.x}
+          y={addNodeMenu.y}
+          onSelect={handleAddNodeFromMenu}
+          onClose={() => setAddNodeMenu(null)}
+        />
+      )}
 
       <ChatDrawer />
     </div>

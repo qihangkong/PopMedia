@@ -29,3 +29,8 @@ export const ZOOM_OPTIONS = [
   { label: '200%', value: 2 },
 ]
 
+// 菜单层级
+export const MENU_Z_INDEX = 1000
+export const MENU_MIN_WIDTH = 220
+export const MENU_MIN_HEIGHT = 400
+

@@ -92,28 +92,34 @@ export function useCanvasData() {
   }, [])
 
   const addNode = useCallback(
-    (type: string) => {
+    (type: string, position?: { x: number; y: number }) => {
       const mediaData: Record<string, unknown> = {}
       if (type === 'text') mediaData.content = ''
       if (type === 'image') mediaData.imageUrl = ''
       if (type === 'video') mediaData.videoUrl = ''
       if (type === 'audio') mediaData.audioUrl = ''
-      const viewport = getViewport()
-      const centerX = (window.innerWidth / 2 - viewport.x) / viewport.zoom - NODE_WIDTH / 2
-      const offset = NODE_HEIGHT + 30
-      const lastNode = nodes[nodes.length - 1]
-      const positionY = lastNode
-        ? lastNode.position.y + offset
-        : (window.innerHeight / 2 - viewport.y) / viewport.zoom - NODE_HEIGHT / 2
+
+      let finalPosition = position
+      if (!finalPosition) {
+        const viewport = getViewport()
+        const centerX = (window.innerWidth / 2 - viewport.x) / viewport.zoom - NODE_WIDTH / 2
+        const offset = NODE_HEIGHT + 30
+        const lastNode = nodes[nodes.length - 1]
+        const positionY = lastNode
+          ? lastNode.position.y + offset
+          : (window.innerHeight / 2 - viewport.y) / viewport.zoom - NODE_HEIGHT / 2
+        finalPosition = { x: centerX, y: positionY }
+      }
 
       const newNode: Node = {
         id: `${Date.now()}`,
         type,
-        position: { x: centerX, y: positionY },
+        position: finalPosition,
         data: { label: type === 'text' ? '文本节点' : `${type}节点`, type, ...mediaData },
         style: { width: NODE_WIDTH, height: NODE_HEIGHT },
       }
       setNodes((nds) => [...nds, newNode])
+      return newNode.id
     },
     [setNodes, getViewport, nodes]
   )
@@ -180,6 +186,38 @@ export function useCanvasData() {
     [getViewport]
   )
 
+  // Add node at specific position and optionally connect from source
+  const addNodeWithConnection = useCallback(
+    (type: string, position: { x: number; y: number }, sourceNodeId?: string, sourceHandleId?: string) => {
+      const mediaData: Record<string, unknown> = {}
+      if (type === 'text') mediaData.content = ''
+      if (type === 'image') mediaData.imageUrl = ''
+      if (type === 'video') mediaData.videoUrl = ''
+      if (type === 'audio') mediaData.audioUrl = ''
+
+      const newNode: Node = {
+        id: `${Date.now()}`,
+        type,
+        position,
+        data: { label: type === 'text' ? '文本节点' : `${type}节点`, type, ...mediaData },
+        style: { width: NODE_WIDTH, height: NODE_HEIGHT },
+      }
+      setNodes((nds) => [...nds, newNode])
+
+      // Create edge connection if source is provided
+      if (sourceNodeId) {
+        const connection: Connection = {
+          source: sourceNodeId,
+          target: newNode.id,
+          targetHandle: null,
+          sourceHandle: sourceHandleId ?? null,
+        }
+        setEdges((eds) => addEdge({ ...connection, type: 'bezier' }, eds))
+      }
+    },
+    [setNodes, setEdges]
+  )
+
   return {
     nodes,
     setNodes,
@@ -190,6 +228,7 @@ export function useCanvasData() {
     onConnect,
     isValidConnection,
     addNode,
+    addNodeWithConnection,
     loadCanvas,
     saveCanvas,
   }
