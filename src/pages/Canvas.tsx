@@ -22,7 +22,7 @@ import { TextNode } from '../components/TextNode'
 import { ImageNode } from '../components/ImageNode'
 import { VideoNode } from '../components/VideoNode'
 import { AudioNode } from '../components/AudioNode'
-import { NodeContextMenu, ImagePreviewModal, VideoPreviewModal } from '../components/CanvasModals'
+import { ImagePreviewModal, VideoPreviewModal } from '../components/CanvasModals'
 import { AddNodeMenu } from '../components/AddNodeMenu'
 import { NodeAIDialog } from '../components/NodeAIDialog'
 import {
@@ -148,13 +148,10 @@ export default function Canvas() {
   } = useCanvasData()
   const { canvasId, canvasName, setCanvasName, isLoading, isInitializedRef } = useCanvasId(loadCanvas)
   const {
-    contextMenu,
-    setContextMenu,
     previewImage,
     setPreviewImage,
     previewVideo,
     setPreviewVideo,
-    handleUploadMedia,
   } = useCanvasEventListeners()
 
   useCanvasAutoSave(canvasId, canvasName, nodes, edges, isInitializedRef, isLoading, saveCanvas)
@@ -301,17 +298,6 @@ export default function Canvas() {
           snapToGrid={snapToGrid}
         />
       </ReactFlow>
-
-      {contextMenu && (
-        <NodeContextMenu
-          nodeId={contextMenu.nodeId}
-          nodeType={contextMenu.nodeType}
-          x={contextMenu.x}
-          y={contextMenu.y}
-          onUploadMedia={handleUploadMedia}
-          onClose={() => setContextMenu(null)}
-        />
-      )}
 
       <ImagePreviewModal imageUrl={previewImage} onClose={() => setPreviewImage(null)} />
       <VideoPreviewModal videoUrl={previewVideo} onClose={() => setPreviewVideo(null)} />
