@@ -24,6 +24,7 @@ import { VideoNode } from '../components/VideoNode'
 import { AudioNode } from '../components/AudioNode'
 import { NodeContextMenu, ImagePreviewModal, VideoPreviewModal } from '../components/CanvasModals'
 import { AddNodeMenu } from '../components/AddNodeMenu'
+import { NodeAIDialog } from '../components/NodeAIDialog'
 import {
   GRID_SIZE,
   GRID_SNAP,
@@ -118,6 +119,7 @@ export default function Canvas() {
   const [showMinimap, setShowMinimap] = useState(true)
   const [snapToGrid, setSnapToGrid] = useState(false)
   const [zoom, setZoom] = useState(DEFAULT_ZOOM)
+  const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null)
 
   // Add node menu state for connection drag
   const [addNodeMenu, setAddNodeMenu] = useState<{
@@ -219,6 +221,19 @@ export default function Canvas() {
     [addNodeMenu, getViewport, addNodeWithConnection]
   )
 
+  const handleSelectionChange = useCallback((params: { nodes: { id: string }[] }) => {
+    if (params.nodes.length === 1) {
+      setSelectedNodeId(params.nodes[0].id)
+    } else {
+      setSelectedNodeId(null)
+    }
+  }, [])
+
+  const handleAISend = useCallback((message: string) => {
+    console.log('AI message for node:', selectedNodeId, message)
+    // TODO: 实现 AI 发送逻辑
+  }, [selectedNodeId])
+
   return (
     <div className="page-container">
       {isLoading && (
@@ -251,6 +266,7 @@ export default function Canvas() {
         defaultEdgeOptions={{ type: 'bezier' }}
         style={{ background: '#1a1a1a', position: 'relative' }}
         onPaneClick={() => window.dispatchEvent(new CustomEvent('closeAllMenus'))}
+        onSelectionChange={handleSelectionChange}
       >
         <Background
           variant={BackgroundVariant.Dots}
@@ -299,6 +315,14 @@ export default function Canvas() {
 
       <ImagePreviewModal imageUrl={previewImage} onClose={() => setPreviewImage(null)} />
       <VideoPreviewModal videoUrl={previewVideo} onClose={() => setPreviewVideo(null)} />
+
+      {selectedNodeId && (
+        <NodeAIDialog
+          nodeId={selectedNodeId}
+          onSend={handleAISend}
+          onClose={() => setSelectedNodeId(null)}
+        />
+      )}
 
       {addNodeMenu && (
         <AddNodeMenu

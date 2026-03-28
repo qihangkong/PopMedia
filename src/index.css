@@ -2276,7 +2276,85 @@ body {
   transform: none;
 }
 
-.chat-send-btn:disabled {
+/* ============================================================
+   Node AI Dialog — 节点下方 AI 输入框
+   ============================================================ */
+
+.node-ai-dialog {
+  background: rgba(30, 30, 30, 0.98);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(16px);
+  animation: fadeInUp 0.15s ease;
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.node-ai-dialog-input-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 8px;
+}
+
+.node-ai-dialog-input-wrapper:focus-within {
+  border-color: rgba(99, 102, 241, 0.5);
+}
+
+.node-ai-dialog-textarea {
+  flex: none;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: #fff;
+  font-size: 14px;
+  font-family: inherit;
+  line-height: 1.5;
+  resize: none;
+  padding: 0;
+  overflow: hidden;
+  min-height: 48px;
+  height: 48px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.node-ai-dialog-textarea::placeholder {
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.node-ai-dialog-send {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  background: linear-gradient(135deg, #6366f1 0%, #818cf8 100%);
+  border: none;
+  border-radius: 6px;
+  color: #fff;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+  align-self: flex-end;
+}
+
+.node-ai-dialog-send:hover:not(:disabled) {
+  transform: scale(1.05);
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
+}
+
+.node-ai-dialog-send:disabled {
   opacity: 0.4;
   cursor: not-allowed;
   transform: none;
