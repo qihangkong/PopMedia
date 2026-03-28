@@ -715,7 +715,7 @@ export default function Canvas() {
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>([])
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([])
 
-  const { zoomIn, zoomOut, getViewport, setViewport } = useReactFlow()
+  const { zoomIn, zoomOut, getViewport, setViewport, fitView } = useReactFlow()
 
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const isInitializedRef = useRef(false)
@@ -752,19 +752,27 @@ export default function Canvas() {
       if (type === 'image') mediaData.imageUrl = ''
       if (type === 'video') mediaData.videoUrl = ''
       if (type === 'audio') mediaData.audioUrl = ''
+      const viewport = getViewport()
+      // 计算屏幕中央在流程坐标中的位置，节点中心对齐屏幕中央
+      const centerX = (window.innerWidth / 2 - viewport.x) / viewport.zoom - NODE_WIDTH / 2
+      // 如果已有节点，新节点创建在最后一个节点下方；否则创建在屏幕中央
+      const offset = NODE_HEIGHT + 30
+      const lastNode = nodes[nodes.length - 1]
+      const positionY = lastNode ? lastNode.position.y + offset : (window.innerHeight / 2 - viewport.y) / viewport.zoom - NODE_HEIGHT / 2
+
       const newNode: Node = {
         id: `${Date.now()}`,
         type: type,
         position: {
-          x: Math.random() * 300 + 100,
-          y: Math.random() * 200 + 100,
+          x: centerX,
+          y: positionY,
         },
         data: { label: type === 'text' ? '文本节点' : `${type}节点`, type, ...mediaData },
         style: { width: NODE_WIDTH, height: NODE_HEIGHT },
       }
       setNodes((nds) => [...nds, newNode])
     },
-    [setNodes]
+    [setNodes, getViewport, nodes]
   )
 
   const handleMoveEnd = useCallback((_: MouseEvent | TouchEvent | null, viewport: Viewport) => {
@@ -875,12 +883,15 @@ export default function Canvas() {
       }
       if (data.viewport) {
         setViewport(data.viewport as Viewport)
+      } else {
+        // 没有保存视口时，适用 fitView 来显示所有节点
+        setTimeout(() => fitView({ maxZoom: MAX_ZOOM, padding: FIT_VIEW_PADDING }), 0)
       }
       console.log('[Canvas] Loaded:', id)
     } catch (err) {
       console.log('[Canvas] No existing data or load failed, starting fresh')
     }
-  }, [setNodes, setEdges, setViewport])
+  }, [setNodes, setEdges, setViewport, fitView])
 
   // 初始化画布ID
   useEffect(() => {
@@ -954,7 +965,6 @@ export default function Canvas() {
         nodeTypes={nodeTypes}
         edgeTypes={edgeTypes}
         isValidConnection={isValidConnection}
-        fitView
         fitViewOptions={{ maxZoom: MAX_ZOOM, padding: FIT_VIEW_PADDING }}
         snapToGrid={snapToGrid}
         snapGrid={GRID_SNAP}
