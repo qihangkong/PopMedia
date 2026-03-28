@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from 'react'
+import { useEffect, useState, useMemo, useRef } from 'react'
 import { MENU_Z_INDEX } from '../constants'
 import { NODE_TYPES_META, type NodeTypeMeta } from '../nodeTypes'
 import { UploadIcon, LibraryIcon } from '../icons'
@@ -20,12 +20,14 @@ interface ResourceItem {
 
 export function AddNodeMenu({ x, y, onSelect, onClose }: AddNodeMenuProps) {
   const [isReady, setIsReady] = useState(false)
+  const menuRef = useRef<HTMLDivElement>(null)
 
   // Calculate menu position with boundary detection
+  // menuRef needed to measure actual height for boundary detection
   const menuPosition = useMemo(() => {
     const menuWidth = 240
-    const menuHeight = 420
     const padding = 10
+    const menuHeight = menuRef.current?.scrollHeight || 420
 
     let left = x
     let top = y
@@ -113,6 +115,7 @@ export function AddNodeMenu({ x, y, onSelect, onClose }: AddNodeMenuProps) {
 
   return (
     <div
+      ref={menuRef}
       className="add-menu-dropdown"
       style={{
         position: 'fixed',
