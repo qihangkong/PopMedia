@@ -329,3 +329,9 @@ export const ServerIcon = () => (
     <line x1="6" x2="6.01" y1="18" y2="18"></line>
   </svg>
 )
+
+export const DeleteIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M18 6L6 18M6 6l12 12"/>
+  </svg>
+)
