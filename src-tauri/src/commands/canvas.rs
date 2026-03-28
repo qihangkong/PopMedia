@@ -284,9 +284,10 @@ pub async fn upload_media(
     hasher.update(&bytes);
     let hash = format!("{:x}", hasher.finalize());
 
-    // Keep original extension for MIME type detection
+    // Extract file extension from right side (rsplit handles cases like "photo.tar.gz" correctly)
+    // Falls back to "bin" only if filename has no dot at all (e.g., "photo" -> "bin")
     let ext = filename.rsplit('.').next().unwrap_or("bin");
-    let local_filename = format!("{}.{}", hash, ext); // Use full SHA256 hash
+    let local_filename = format!("{}.{}", hash, ext);
     let file_path = uploads_dir.join(&local_filename);
 
     // Only write if file doesn't exist (deduplication)
@@ -311,9 +312,10 @@ pub async fn upload_file(filename: String, data: Vec<u8>) -> Result<String, Stri
     hasher.update(&data);
     let hash = format!("{:x}", hasher.finalize());
 
-    // Keep original extension for MIME type detection
+    // Extract file extension from right side (rsplit handles cases like "photo.tar.gz" correctly)
+    // Falls back to "bin" only if filename has no dot at all (e.g., "photo" -> "bin")
     let ext = filename.rsplit('.').next().unwrap_or("bin");
-    let local_filename = format!("{}.{}", hash, ext); // Use full SHA256 hash
+    let local_filename = format!("{}.{}", hash, ext);
     let file_path = uploads_dir.join(&local_filename);
 
     // Only write if file doesn't exist (deduplication)
