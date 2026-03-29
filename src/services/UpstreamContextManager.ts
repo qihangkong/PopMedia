@@ -1,36 +1,19 @@
 import type { Node, Edge } from '@xyflow/react'
+import type { NodeData, NodeType } from '../types'
+import { getNodeContent } from '../types'
 
 /**
  * Extract content from a node based on its type
  */
 export function extractNodeContent(node: Node): string {
-  const data = node.data as {
-    type: 'text' | 'image' | 'video' | 'audio'
-    content?: string
-    imageUrl?: string
-    videoUrl?: string
-    audioUrl?: string
-  }
-
-  switch (data.type) {
-    case 'text':
-      return data.content || ''
-    case 'image':
-      return `[图片] ${data.imageUrl || '无URL'}`
-    case 'video':
-      return `[视频] ${data.videoUrl || '无URL'}`
-    case 'audio':
-      return `[音频] ${data.audioUrl || '无URL'}`
-    default:
-      return JSON.stringify(data)
-  }
+  return getNodeContent(node.data as unknown as NodeData)
 }
 
 export interface UpstreamNode {
   nodeId: string
   nodeLabel: string
   content: string
-  type: 'text' | 'image' | 'video' | 'audio'
+  type: NodeType
   distance: number            // 跳数
 }
 
@@ -78,11 +61,12 @@ export class UpstreamContextManager {
       const sourceNode = nodeMap.get(edge.source)
       if (!sourceNode) continue
 
+      const nodeData = sourceNode.data as unknown as NodeData
       result.push({
         nodeId: sourceNode.id,
-        nodeLabel: sourceNode.data.label as string,
+        nodeLabel: nodeData.label,
         content: extractNodeContent(sourceNode),
-        type: sourceNode.data.type as 'text' | 'image' | 'video' | 'audio',
+        type: nodeData.type,
         distance: currentDepth + 1
       })
 

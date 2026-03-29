@@ -17,6 +17,27 @@ import {
   updateCanvasPreview,
   getCanvasById,
 } from '../utils/tauriApi'
+import type { NodeData, NodeType } from '../types'
+import { getNodeMediaUrl } from '../types'
+
+// 创建节点数据的辅助函数
+function createNodeData(type: NodeType, label?: string): NodeData {
+  const defaultLabel = type === 'text' ? '文本节点' : `${type}节点`
+  const base: NodeData = { type, label: label || defaultLabel }
+
+  switch (type) {
+    case 'text':
+      return { ...base, content: '' }
+    case 'image':
+      return { ...base, imageUrl: '' }
+    case 'video':
+      return { ...base, videoUrl: '' }
+    case 'audio':
+      return { ...base, audioUrl: '' }
+    default:
+      return base
+  }
+}
 
 function generateUUID(): string {
   return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
@@ -93,12 +114,6 @@ export function useCanvasData() {
 
   const addNode = useCallback(
     (type: string, position?: { x: number; y: number }) => {
-      const mediaData: Record<string, unknown> = {}
-      if (type === 'text') mediaData.content = ''
-      if (type === 'image') mediaData.imageUrl = ''
-      if (type === 'video') mediaData.videoUrl = ''
-      if (type === 'audio') mediaData.audioUrl = ''
-
       let finalPosition = position
       if (!finalPosition) {
         const viewport = getViewport()
@@ -111,11 +126,12 @@ export function useCanvasData() {
         finalPosition = { x: centerX, y: positionY }
       }
 
+      const nodeType = type as NodeType
       const newNode: Node = {
         id: `${Date.now()}`,
-        type,
+        type: nodeType,
         position: finalPosition,
-        data: { label: type === 'text' ? '文本节点' : `${type}节点`, type, ...mediaData },
+        data: createNodeData(nodeType) as unknown as Record<string, unknown>,
         style: { width: NODE_WIDTH, height: NODE_HEIGHT },
       }
       setNodes((nds) => [...nds, newNode])
@@ -157,10 +173,7 @@ export function useCanvasData() {
         const mediaUrls: string[] = []
         const seenUrls = new Set<string>()
         for (const node of nodes) {
-          const url =
-            (node.data as { imageUrl?: string }).imageUrl ||
-            (node.data as { videoUrl?: string }).videoUrl ||
-            (node.data as { audioUrl?: string }).audioUrl
+          const url = getNodeMediaUrl(node.data as unknown as NodeData)
           if (url && !seenUrls.has(url)) {
             seenUrls.add(url)
             mediaUrls.push(url)
@@ -189,17 +202,12 @@ export function useCanvasData() {
   // Add node at specific position and optionally connect from source
   const addNodeWithConnection = useCallback(
     (type: string, position: { x: number; y: number }, sourceNodeId?: string, sourceHandleId?: string) => {
-      const mediaData: Record<string, unknown> = {}
-      if (type === 'text') mediaData.content = ''
-      if (type === 'image') mediaData.imageUrl = ''
-      if (type === 'video') mediaData.videoUrl = ''
-      if (type === 'audio') mediaData.audioUrl = ''
-
+      const nodeType = type as NodeType
       const newNode: Node = {
         id: `${Date.now()}`,
-        type,
+        type: nodeType,
         position,
-        data: { label: type === 'text' ? '文本节点' : `${type}节点`, type, ...mediaData },
+        data: createNodeData(nodeType) as unknown as Record<string, unknown>,
         style: { width: NODE_WIDTH, height: NODE_HEIGHT },
       }
       setNodes((nds) => [...nds, newNode])

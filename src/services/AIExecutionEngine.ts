@@ -2,7 +2,8 @@ import type { Node, Edge } from '@xyflow/react'
 import { sendChatMessage } from '../utils/chatApi'
 import { UpstreamContextManager, extractNodeContent } from './UpstreamContextManager'
 import { IntentClassifier, Intent } from './IntentClassifier'
-import type { ExecutionState, ChatMessage, NodeAIConfig } from '../types/ai'
+import type { ExecutionState, ChatMessage } from '../types/ai'
+import type { NodeData } from '../types'
 
 // 角色对应的System Prompt
 const ROLE_PROMPTS: Record<string, string> = {
@@ -115,10 +116,12 @@ export class AIExecutionEngine {
     const node = nodes.find(n => n.id === nodeId)
     if (!node) throw new Error(`Node not found: ${nodeId}`)
 
+    const nodeData = node.data as unknown as NodeData
+
     try {
       onStateChange?.({ status: 'pending', progress: '分析意图...' })
 
-      const aiConfig = (node.data as { aiConfig?: NodeAIConfig }).aiConfig
+      const aiConfig = nodeData.aiConfig
       const intent = IntentClassifier.classify(userInput, aiConfig?.role)
 
       let upstreamContent = ''
@@ -132,7 +135,7 @@ export class AIExecutionEngine {
       }
 
       onStateChange?.({ status: 'generating', progress: '正在生成...' })
-      const fullPrompt = this.buildPrompt(intent, upstreamContent, node.data)
+      const fullPrompt = this.buildPrompt(intent, upstreamContent, nodeData)
       const result = await sendChatMessage(fullPrompt, model)
 
       onStateChange?.({ status: 'completed', result, startTime: Date.now() })
@@ -171,7 +174,8 @@ export class AIExecutionEngine {
 
     const mentionedNodes = nodes.filter(n => mentionNodeIds.includes(n.id))
     const context = mentionedNodes.map(n => {
-      return `[${n.data.label}]\n${extractNodeContent(n)}`
+      const nodeData = n.data as unknown as NodeData
+      return `[${nodeData.label}]\n${extractNodeContent(n)}`
     }).join('\n\n')
 
     const fullPrompt = `## 引用内容\n${context}\n\n## 用户指令\n${userInput}`
@@ -181,10 +185,10 @@ export class AIExecutionEngine {
   private static buildPrompt(
     intent: Intent,
     upstreamContent: string,
-    nodeData: Record<string, unknown>
+    nodeData: NodeData
   ): string {
-    const aiConfig = (nodeData as { aiConfig?: NodeAIConfig }).aiConfig
-    const systemPrompt = (nodeData as { systemPrompt?: string }).systemPrompt ||
+    const aiConfig = nodeData.aiConfig
+    const systemPrompt = nodeData.systemPrompt ||
       (aiConfig?.role ? ROLE_PROMPTS[aiConfig.role] : ROLE_PROMPTS['generator'])
 
     let userContent = ''

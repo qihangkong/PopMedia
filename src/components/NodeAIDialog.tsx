@@ -5,7 +5,8 @@ import { useUpstreamPreview } from '../hooks/useUpstreamPreview'
 import { ModelSelect } from './ModelSelect'
 import { getLlmConfigs } from '../utils/chatApi'
 import type { LlmConfig } from '../utils/tauriApi'
-import type { ExecutionState, NodeAIConfig } from '../types/ai'
+import type { ExecutionState } from '../types/ai'
+import type { NodeData } from '../types'
 
 interface NodeAIDialogProps {
   nodeId: string
@@ -41,7 +42,8 @@ export function NodeAIDialog({ nodeId, onClose }: NodeAIDialogProps) {
 
   // Restore saved model from node config, or load from backend
   useEffect(() => {
-    const savedModel = (node?.data as { aiConfig?: NodeAIConfig })?.aiConfig?.model
+    const nodeData = node?.data as NodeData | undefined
+    const savedModel = nodeData?.aiConfig?.model
 
     getLlmConfigs().then(configs => {
       setLlmConfigs(configs)
