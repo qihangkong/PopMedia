@@ -6,7 +6,9 @@ import { initWindowManager } from './utils/windowManager'
 import { useEffect } from 'react'
 import { ChatProvider } from './contexts/ChatContext'
 import { CanvasProvider } from './contexts/CanvasContext'
+import { NotificationProvider } from './contexts/NotificationContext'
 import { ErrorBoundary } from './components/ErrorBoundary'
+import { Notification } from './components/Notification'
 
 const isDev = import.meta.env.DEV
 
@@ -40,14 +42,17 @@ export default function App() {
 
   return (
     <BrowserRouter>
-      <ErrorBoundary>
-        <Routes>
-          <Route path="/" element={<Home />} />
-          <Route path="/projects" element={<Projects />} />
-          <Route path="/canvas" element={<CanvasWithProvider />} />
-          <Route path="/settings" element={<Settings />} />
-        </Routes>
-      </ErrorBoundary>
+      <NotificationProvider>
+        <ErrorBoundary>
+          <Routes>
+            <Route path="/" element={<Home />} />
+            <Route path="/projects" element={<Projects />} />
+            <Route path="/canvas" element={<CanvasWithProvider />} />
+            <Route path="/settings" element={<Settings />} />
+          </Routes>
+          <Notification />
+        </ErrorBoundary>
+      </NotificationProvider>
     </BrowserRouter>
   )
 }

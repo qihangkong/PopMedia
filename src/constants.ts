@@ -34,3 +34,6 @@ export const MENU_Z_INDEX = 1000
 export const MENU_MIN_WIDTH = 220
 export const MENU_MIN_HEIGHT = 400
 
+// 通知层级
+export const NOTIFICATION_Z_INDEX = 9999
+
