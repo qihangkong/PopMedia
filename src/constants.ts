@@ -37,3 +37,11 @@ export const MENU_MIN_HEIGHT = 400
 // 通知层级
 export const NOTIFICATION_Z_INDEX = 9999
 
+// 添加节点菜单
+export const ADD_MENU_WIDTH = 240
+export const ADD_MENU_HEIGHT_DEFAULT = 420
+export const ADD_MENU_PADDING = 10
+
+// 边偏移量
+export const EDGE_OFFSET = 12
+

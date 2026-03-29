@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef } from 'react'
-import { MENU_Z_INDEX } from '../constants'
+import { MENU_Z_INDEX, ADD_MENU_WIDTH, ADD_MENU_HEIGHT_DEFAULT, ADD_MENU_PADDING } from '../constants'
 import { NODE_TYPES_META, type NodeTypeMeta } from '../nodeTypes'
 
 interface AddNodeMenuProps {
@@ -15,25 +15,23 @@ export function AddNodeMenu({ x, y, onSelect, onClose }: AddNodeMenuProps) {
   // Calculate menu position with boundary detection
   // menuRef needed to measure actual height for boundary detection
   const menuPosition = useMemo(() => {
-    const menuWidth = 240
-    const padding = 10
-    const menuHeight = menuRef.current?.scrollHeight || 420
+    const menuHeight = menuRef.current?.scrollHeight || ADD_MENU_HEIGHT_DEFAULT
 
     let left = x
     let top = y
 
     // Ensure menu stays within viewport
-    if (left + menuWidth > window.innerWidth - padding) {
-      left = window.innerWidth - menuWidth - padding
+    if (left + ADD_MENU_WIDTH > window.innerWidth - ADD_MENU_PADDING) {
+      left = window.innerWidth - ADD_MENU_WIDTH - ADD_MENU_PADDING
     }
-    if (left < padding) {
-      left = padding
+    if (left < ADD_MENU_PADDING) {
+      left = ADD_MENU_PADDING
     }
-    if (top + menuHeight > window.innerHeight - padding) {
-      top = window.innerHeight - menuHeight - padding
+    if (top + menuHeight > window.innerHeight - ADD_MENU_PADDING) {
+      top = window.innerHeight - menuHeight - ADD_MENU_PADDING
     }
-    if (top < padding) {
-      top = padding
+    if (top < ADD_MENU_PADDING) {
+      top = ADD_MENU_PADDING
     }
 
     return { left, top }

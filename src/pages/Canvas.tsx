@@ -33,6 +33,7 @@ import {
   FIT_VIEW_PADDING,
   NODE_WIDTH,
   NODE_HEIGHT,
+  EDGE_OFFSET,
 } from '../constants'
 import {
   useCanvasId,
@@ -59,16 +60,15 @@ function CustomBezierEdge({
   style,
 }: EdgeProps) {
   const getOffset = (pos: Position) => {
-    const offset = 12
     switch (pos) {
       case Position.Left:
-        return { x: offset, y: 0 }
+        return { x: EDGE_OFFSET, y: 0 }
       case Position.Right:
-        return { x: -offset, y: 0 }
+        return { x: -EDGE_OFFSET, y: 0 }
       case Position.Top:
-        return { x: 0, y: -offset }
+        return { x: 0, y: -EDGE_OFFSET }
       case Position.Bottom:
-        return { x: 0, y: offset }
+        return { x: 0, y: EDGE_OFFSET }
       default:
         return { x: 0, y: 0 }
     }
