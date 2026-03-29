@@ -27,14 +27,6 @@ export const TextNode = memo(function TextNode({ data, selected, id }: TextNodeP
       className={`custom-node text-node${selected ? ' selected' : ''}`}
       data-id={id}
       style={{ width: '100%', height: '100%' }}
-      onContextMenu={(e) => {
-        e.preventDefault()
-        const event = new CustomEvent('nodeContextMenu', {
-          detail: { nodeId: id, nodeType: 'text', x: e.clientX, y: e.clientY },
-          bubbles: true,
-        })
-        e.currentTarget.dispatchEvent(event)
-      }}
     >
       <NodeHeader id={id} type="text" label={data.label} />
       <div className="node-body">

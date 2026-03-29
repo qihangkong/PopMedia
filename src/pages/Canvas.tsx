@@ -1,5 +1,5 @@
-import { useCallback, useState, useRef } from 'react'
-import { useReactFlow } from '@xyflow/react'
+import { useCallback, useState, useRef, useEffect } from 'react'
+import { useReactFlow, Node, NodeMouseHandler } from '@xyflow/react'
 import {
   ReactFlow,
   Background,
@@ -24,6 +24,7 @@ import { VideoNode } from '../components/VideoNode'
 import { AudioNode } from '../components/AudioNode'
 import { ImagePreviewModal, VideoPreviewModal } from '../components/CanvasModals'
 import { AddNodeMenu } from '../components/AddNodeMenu'
+import { useCanvasContext } from '../contexts/CanvasContext'
 import {
   GRID_SIZE,
   GRID_SNAP,
@@ -37,7 +38,6 @@ import {
   useCanvasId,
   useCanvasData,
   useCanvasAutoSave,
-  useCanvasEventListeners,
 } from '../hooks/useCanvas'
 
 export const nodeTypes = {
@@ -145,12 +145,18 @@ export default function Canvas() {
     saveCanvas,
   } = useCanvasData()
   const { canvasId, canvasName, setCanvasName, isLoading, isInitializedRef } = useCanvasId(loadCanvas)
+
+  // Canvas context for node events
   const {
+    contextMenu,
+    onNodeContextMenu,
+    clearContextMenu,
     previewImage,
-    setPreviewImage,
+    onPreviewImage,
     previewVideo,
-    setPreviewVideo,
-  } = useCanvasEventListeners()
+    onPreviewVideo,
+    onCloseAllMenus,
+  } = useCanvasContext()
 
   useCanvasAutoSave(canvasId, canvasName, nodes, edges, isInitializedRef, isLoading, saveCanvas)
 
@@ -236,6 +242,28 @@ export default function Canvas() {
     }
   }, [])
 
+  // Handle node context menu from React Flow
+  const handleNodeContextMenu: NodeMouseHandler<Node> = useCallback((event, node) => {
+    event.preventDefault()
+    event.stopPropagation()
+    const nodeType = node.type || 'text'
+    onNodeContextMenu(node.id, nodeType, event.clientX, event.clientY)
+  }, [onNodeContextMenu])
+
+  // Close menus on pane click
+  const handlePaneClick = useCallback(() => {
+    onCloseAllMenus()
+    setAddNodeMenu(null)
+  }, [onCloseAllMenus])
+
+  // Also close context menu when clicking outside
+  useEffect(() => {
+    if (!contextMenu) return
+    const handleClick = () => clearContextMenu()
+    window.addEventListener('click', handleClick)
+    return () => window.removeEventListener('click', handleClick)
+  }, [contextMenu, clearContextMenu])
+
   return (
     <div className="page-container">
       {isLoading && (
@@ -256,6 +284,7 @@ export default function Canvas() {
         onConnectEnd={onConnectEnd}
         onMoveEnd={handleMoveEnd}
         onDoubleClick={(e) => e.stopPropagation()}
+        onNodeContextMenu={handleNodeContextMenu}
         nodeTypes={nodeTypes}
         edgeTypes={edgeTypes}
         isValidConnection={isValidConnection}
@@ -267,7 +296,7 @@ export default function Canvas() {
         proOptions={{ hideAttribution: true }}
         defaultEdgeOptions={{ type: 'bezier' }}
         style={{ background: '#1a1a1a', position: 'relative' }}
-        onPaneClick={() => window.dispatchEvent(new CustomEvent('closeAllMenus'))}
+        onPaneClick={handlePaneClick}
         onPaneContextMenu={handlePaneContextMenu}
       >
         <Background
@@ -304,8 +333,8 @@ export default function Canvas() {
         />
       </ReactFlow>
 
-      <ImagePreviewModal imageUrl={previewImage} onClose={() => setPreviewImage(null)} />
-      <VideoPreviewModal videoUrl={previewVideo} onClose={() => setPreviewVideo(null)} />
+      <ImagePreviewModal imageUrl={previewImage} onClose={() => onPreviewImage('')} />
+      <VideoPreviewModal videoUrl={previewVideo} onClose={() => onPreviewVideo('')} />
 
       {addNodeMenu && (
         <AddNodeMenu

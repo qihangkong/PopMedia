@@ -5,6 +5,7 @@ import { ResizeHandle } from './ResizeHandle'
 import { NodeAIInput } from './NodeAIInput'
 import { useNodeUpdates } from '../hooks/useNodeUpdates'
 import { useMediaUrl } from '../hooks/useMediaUrl'
+import { useCanvasContext } from '../contexts/CanvasContext'
 import { UploadIcon, DeleteIcon } from '../icons'
 import { uploadFile } from '../utils/tauriApi'
 import { HANDLE_SIZE } from '../constants'
@@ -20,11 +21,7 @@ export const VideoNode = memo(function VideoNode({ data, selected, id }: VideoNo
   const displayVideoUrl = useMediaUrl(data.videoUrl)
   const videoFileInputRef = useRef<HTMLInputElement>(null)
   const [uploading, setUploading] = useState(false)
-
-  const dispatchPreviewEvent = (eventName: string, detail: Record<string, unknown>) => {
-    const event = new CustomEvent(eventName, { detail, bubbles: true })
-    window.dispatchEvent(event)
-  }
+  const { onPreviewVideo } = useCanvasContext()
 
   const handleMediaUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -48,14 +45,6 @@ export const VideoNode = memo(function VideoNode({ data, selected, id }: VideoNo
       className={`custom-node video-node${selected ? ' selected' : ''}`}
       data-id={id}
       style={{ width: '100%', height: '100%' }}
-      onContextMenu={(e) => {
-        e.preventDefault()
-        const event = new CustomEvent('nodeContextMenu', {
-          detail: { nodeId: id, nodeType: 'video', x: e.clientX, y: e.clientY },
-          bubbles: true,
-        })
-        e.currentTarget.dispatchEvent(event)
-      }}
     >
       <NodeHeader id={id} type="video" label={data.label} />
       <div className="node-body">
@@ -72,7 +61,7 @@ export const VideoNode = memo(function VideoNode({ data, selected, id }: VideoNo
               title="全屏预览视频"
               onClick={(e) => {
                 e.stopPropagation()
-                dispatchPreviewEvent('previewVideo', { videoUrl: displayVideoUrl })
+                onPreviewVideo(displayVideoUrl)
               }}
             >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">

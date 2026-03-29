@@ -5,17 +5,20 @@ import { isTauri, getAppInfo } from './utils/tauriApi'
 import { initWindowManager } from './utils/windowManager'
 import { useEffect } from 'react'
 import { ChatProvider } from './contexts/ChatContext'
+import { CanvasProvider } from './contexts/CanvasContext'
 import { ErrorBoundary } from './components/ErrorBoundary'
 
 const isDev = import.meta.env.DEV
 
 function CanvasWithProvider() {
   return (
-    <ChatProvider>
-      <ReactFlowProvider>
-        <Canvas />
-      </ReactFlowProvider>
-    </ChatProvider>
+    <CanvasProvider>
+      <ChatProvider>
+        <ReactFlowProvider>
+          <Canvas />
+        </ReactFlowProvider>
+      </ChatProvider>
+    </CanvasProvider>
   )
 }
 
