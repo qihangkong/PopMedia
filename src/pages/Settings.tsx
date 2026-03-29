@@ -13,6 +13,7 @@ import {
   testComfyuiConnection,
 } from '../utils/tauriApi'
 import { invalidateLlmConfigCache } from '../utils/chatApi'
+import { useNotification } from '../contexts/NotificationContext'
 import {
   BrainIcon,
   SettingsIcon as SettingsIconAlias,
@@ -37,6 +38,7 @@ interface ComfyuiConfigWithStatus extends ComfyuiConfig {
 
 
 export default function Settings() {
+  const { error: notifyError } = useNotification()
   const [llmConfigs, setLlmConfigs] = useState<LlmConfigWithStatus[]>([])
   const [comfyuiConfigs, setComfyuiConfigs] = useState<ComfyuiConfigWithStatus[]>([])
   const [editingId, setEditingId] = useState<string | null>(null)
@@ -56,8 +58,8 @@ export default function Settings() {
       ])
       setLlmConfigs(llms.map(config => ({ ...config, connectionStatus: 'untested' as ConnectionStatus })))
       setComfyuiConfigs(comfyuis.map(config => ({ ...config, connectionStatus: 'untested' as ConnectionStatus })))
-    } catch (error) {
-      console.error('Failed to load configs:', error)
+    } catch {
+      notifyError('加载配置失败')
     } finally {
       setLoading(false)
     }
@@ -77,8 +79,8 @@ export default function Settings() {
       setLlmConfigs(prev => [...prev, newConfig])
       setEditingId(newConfig.id)
       invalidateLlmConfigCache()
-    } catch (error) {
-      console.error('Failed to add LLM config:', error)
+    } catch {
+      notifyError('添加 LLM 配置失败')
     }
   }
 
@@ -94,8 +96,8 @@ export default function Settings() {
       await saveComfyuiConfig(newConfig)
       setComfyuiConfigs([...comfyuiConfigs, newConfig])
       setEditingId(newConfig.id)
-    } catch (error) {
-      console.error('Failed to add ComfyUI config:', error)
+    } catch {
+      notifyError('添加 ComfyUI 配置失败')
     }
   }
 
@@ -103,8 +105,8 @@ export default function Settings() {
     try {
       await deleteLlmConfig(id)
       setLlmConfigs(prev => prev.filter(config => config.id !== id))
-    } catch (error) {
-      console.error('Failed to delete LLM config:', error)
+    } catch {
+      notifyError('删除 LLM 配置失败')
     }
   }
 
@@ -112,8 +114,8 @@ export default function Settings() {
     try {
       await deleteComfyuiConfig(id)
       setComfyuiConfigs(prev => prev.filter(config => config.id !== id))
-    } catch (error) {
-      console.error('Failed to delete ComfyUI config:', error)
+    } catch {
+      notifyError('删除 ComfyUI 配置失败')
     }
   }
 
@@ -135,8 +137,8 @@ export default function Settings() {
     try {
       await saveLlmConfig(updatedConfig)
       invalidateLlmConfigCache()
-    } catch (error) {
-      console.error('Failed to save LLM config:', error)
+    } catch {
+      notifyError('保存 LLM 配置失败')
     }
   }
 
@@ -149,8 +151,8 @@ export default function Settings() {
 
     try {
       await saveComfyuiConfig(updatedConfig)
-    } catch (error) {
-      console.error('Failed to save ComfyUI config:', error)
+    } catch {
+      notifyError('保存 ComfyUI 配置失败')
     }
   }
 
