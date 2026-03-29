@@ -2276,6 +2276,8 @@ body {
    ============================================================ */
 
 .node-ai-dialog {
+  display: flex;
+  flex-direction: column;
   background: rgba(30, 30, 30, 0.98);
   border: 1px solid rgba(255, 255, 255, 0.15);
   border-radius: 12px;
@@ -2316,10 +2318,10 @@ body {
   font-family: inherit;
   line-height: 1.5;
   resize: none;
-  padding: 0;
+  padding: 8px;
   overflow: hidden;
-  min-height: 48px;
-  height: 48px;
+  min-height: 72px;
+  height: 72px;
   width: 100%;
   box-sizing: border-box;
 }
@@ -2353,4 +2355,234 @@ body {
   opacity: 0.4;
   cursor: not-allowed;
   transform: none;
+}
+
+/* 输入行布局 */
+.node-ai-dialog-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.node-ai-dialog-row:first-child {
+  border-top: none;
+}
+
+.node-tags-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  flex: 1;
+  min-width: 0;
+}
+
+/* 第一行：文本输入 */
+.node-ai-dialog-input-row {
+  display: flex;
+  align-items: stretch;
+  padding: 0;
+}
+
+.node-ai-dialog-input-row .node-ai-dialog-textarea {
+  flex: 1;
+}
+
+/* 第二行：控制行（模型选择 + 节点标签 + 发送按钮） */
+.node-ai-dialog-controls-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  flex-wrap: wrap;
+}
+
+.node-ai-dialog-controls-row .node-tags-row {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+
+/* 自定义模型选择器 */
+.model-select-custom {
+  position: relative;
+  display: inline-flex;
+  flex-shrink: 0;
+}
+
+.model-select-custom.disabled {
+  opacity: 0.4;
+  pointer-events: none;
+}
+
+.model-select-trigger {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 6px;
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 12px;
+  padding: 5px 10px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  min-width: 70px;
+}
+
+.model-select-trigger:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.25);
+}
+
+.model-select-arrow {
+  transition: transform 0.2s ease;
+}
+
+.model-select-arrow.open {
+  transform: rotate(180deg);
+}
+
+.model-select-dropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  background: #2a2a2a;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  padding: 4px;
+  z-index: 100;
+  min-width: 100%;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.model-select-option {
+  display: block;
+  width: 100%;
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 12px;
+  padding: 6px 10px;
+  text-align: left;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: background 0.15s ease;
+}
+
+.model-select-option:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.model-select-option.selected {
+  background: rgba(99, 102, 241, 0.2);
+  color: #fff;
+}
+
+/* 状态指示器 */
+.node-ai-dialog-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 8px;
+  background: rgba(99, 102, 241, 0.15);
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+
+.node-ai-dialog-status .status-text {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.node-ai-dialog-status.pending {
+  background: rgba(251, 191, 36, 0.15);
+}
+
+.node-ai-dialog-status.generating {
+  background: rgba(99, 102, 241, 0.15);
+}
+
+.node-ai-dialog-status.completed {
+  background: rgba(34, 197, 94, 0.15);
+}
+
+.node-ai-dialog-status.error {
+  background: rgba(239, 68, 68, 0.15);
+}
+
+.node-ai-dialog-status .cancel-btn {
+  background: rgba(255, 255, 255, 0.1);
+  border: none;
+  border-radius: 4px;
+  color: #fff;
+  font-size: 10px;
+  padding: 2px 6px;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.node-ai-dialog-status .cancel-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+/* 节点标签 */
+.node-tag {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(99, 102, 241, 0.15);
+  border: 1px solid rgba(99, 102, 241, 0.3);
+  border-radius: 6px;
+  padding: 4px 8px;
+  flex-shrink: 0;
+  max-width: 120px;
+}
+
+.node-tag.hidden {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.1);
+  opacity: 0.5;
+}
+
+.node-tag-label {
+  font-size: 11px;
+  color: #fff;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.node-tag.hidden .node-tag-label {
+  text-decoration: line-through;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.node-tag-hide {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.5);
+  cursor: pointer;
+  padding: 2px;
+  border-radius: 4px;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+}
+
+.node-tag-hide:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+}
+
+.node-tag.hidden .node-tag-hide {
+  color: rgba(255, 255, 255, 0.3);
 }

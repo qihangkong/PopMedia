@@ -16,6 +16,7 @@ interface ChatContextType {
   closeChat: () => void
   toggleChat: () => void
   sendMessage: (content: string) => Promise<void>
+  addMessage: (message: Omit<ChatMessage, 'id' | 'timestamp'>) => void
   clearMessages: () => void
 }
 
@@ -38,6 +39,15 @@ export function ChatProvider({ children }: { children: ReactNode }) {
   const clearMessages = useCallback(() => {
     setMessages([])
     setError(null)
+  }, [])
+
+  const addMessage = useCallback((message: Omit<ChatMessage, 'id' | 'timestamp'>) => {
+    const newMessage: ChatMessage = {
+      id: generateId(),
+      timestamp: Date.now(),
+      ...message,
+    }
+    setMessages((prev) => [...prev, newMessage])
   }, [])
 
   const sendMessage = useCallback(async (content: string) => {
@@ -87,6 +97,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
         closeChat,
         toggleChat,
         sendMessage,
+        addMessage,
         clearMessages,
       }}
     >

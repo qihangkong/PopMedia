@@ -8,3 +8,6 @@ export interface BaseNodeData {
   videoUrl?: string
   audioUrl?: string
 }
+
+// Re-export AI types
+export * from './ai'

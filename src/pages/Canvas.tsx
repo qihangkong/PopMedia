@@ -230,10 +230,7 @@ export default function Canvas() {
     }
   }, [])
 
-  const handleAISend = useCallback((message: string) => {
-    console.log('AI message for node:', selectedNodeId, message)
-    // TODO: 实现 AI 发送逻辑
-  }, [selectedNodeId])
+  // NodeAIDialog 现在内部处理 AI 执行，这里只需关闭对话框
 
   const handlePaneContextMenu = useCallback((event: MouseEvent | React.MouseEvent) => {
     event.preventDefault()
@@ -326,7 +323,6 @@ export default function Canvas() {
       {selectedNodeId && (
         <NodeAIDialog
           nodeId={selectedNodeId}
-          onSend={handleAISend}
           onClose={() => setSelectedNodeId(null)}
         />
       )}
