@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react'
 import { useReactFlow } from '@xyflow/react'
 import { useChat, type ChatMessage } from '../contexts/ChatContext'
-import { AIExecutionEngine, ChatMode } from '../services/AIExecutionEngine'
+import { aiExecutionEngine, ChatMode } from '../services/AIExecutionEngine'
 import {
   PlusIcon,
   MoreVerticalIcon,
@@ -66,7 +66,7 @@ export default function ChatDrawer() {
     if (nodeIds.length > 0) {
       setAiLoading(true)
       try {
-        const result = await AIExecutionEngine.execute({
+        const result = await aiExecutionEngine.execute({
           mode: ChatMode.CROSS_NODE,
           userInput: cleanInput,
           mentionNodeIds: nodeIds,

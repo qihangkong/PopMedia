@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef } from 'react'
 import { useReactFlow } from '@xyflow/react'
-import { AIExecutionEngine, ChatMode, ExecutionOptions } from '../services/AIExecutionEngine'
+import { aiExecutionEngine, ChatMode, ExecutionOptions } from '../services/AIExecutionEngine'
 import { useNodeUpdates } from './useNodeUpdates'
 import type { ExecutionState } from '../types/ai'
 
@@ -33,7 +33,7 @@ export function useNodeAI(nodeId: string) {
     }
 
     try {
-      const result = await AIExecutionEngine.execute(options)
+      const result = await aiExecutionEngine.execute(options)
       // 执行完成后写入节点内容
       updateContent(result)
     } catch (error) {

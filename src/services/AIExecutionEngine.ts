@@ -82,7 +82,7 @@ export class AIExecutionEngine {
   /**
    * 执行AI任务
    */
-  static async execute(options: ExecutionOptions): Promise<string> {
+  async execute(options: ExecutionOptions): Promise<string> {
     const { mode, userInput, model, ...rest } = options
 
     switch (mode) {
@@ -100,7 +100,7 @@ export class AIExecutionEngine {
   /**
    * 节点执行模式
    */
-  static async executeNodeTask(
+  async executeNodeTask(
     userInput: string,
     nodeId: string | undefined,
     nodes: Node[] | undefined,
@@ -151,7 +151,7 @@ export class AIExecutionEngine {
   /**
    * 全局对话模式
    */
-  static async executeGlobalChat(userInput: string): Promise<string> {
+  async executeGlobalChat(userInput: string): Promise<string> {
     // 直接调用，不带上下文
     return await sendChatMessage(userInput)
   }
@@ -159,7 +159,7 @@ export class AIExecutionEngine {
   /**
    * 跨节点模式
    */
-  static async executeCrossNode(
+  async executeCrossNode(
     userInput: string,
     mentionNodeIds: string[] | undefined,
     nodes: Node[] | undefined,
@@ -182,7 +182,7 @@ export class AIExecutionEngine {
     return await sendChatMessage(fullPrompt, model)
   }
 
-  private static buildPrompt(
+  private buildPrompt(
     intent: Intent,
     upstreamContent: string,
     nodeData: NodeData
@@ -202,3 +202,6 @@ export class AIExecutionEngine {
     return `${systemPrompt}\n\n${userContent}`
   }
 }
+
+// Singleton instance for backward compatibility
+export const aiExecutionEngine = new AIExecutionEngine()
