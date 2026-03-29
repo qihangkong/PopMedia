@@ -1,4 +1,5 @@
 use crate::commands::http::extract_content_from_response;
+use crate::commands::AppState;
 use crate::models::LlmConfig;
 
 /// Send a chat message to the LLM and get a response
@@ -6,8 +7,9 @@ use crate::models::LlmConfig;
 pub async fn send_chat_message(
     config: LlmConfig,
     message: String,
-    http_client: tauri::State<'_, crate::commands::HttpClient>,
+    state: tauri::State<'_, AppState>,
 ) -> Result<String, String> {
+    let http_client = state.http_client.clone();
     log::info!("发送聊天消息到 LLM: {}", config.name);
 
     if config.api_url.is_empty() {

@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useCallback, ReactNode } from 'react'
+import { sendChatMessage } from '../utils/chatApi'
 
 export interface ChatMessage {
   id: string
@@ -65,9 +66,6 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     setError(null)
 
     try {
-      // Dynamic import to avoid circular dependency
-      const { sendChatMessage } = await import('../utils/chatApi')
-
       const response = await sendChatMessage(content.trim())
 
       const assistantMessage: ChatMessage = {

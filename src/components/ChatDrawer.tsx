@@ -20,8 +20,6 @@ import {
 export default function ChatDrawer() {
   const { messages, isOpen, isLoading, error, closeChat, sendMessage, addMessage, clearMessages } = useChat()
   const [inputValue, setInputValue] = useState('')
-  const [isThinking, setIsThinking] = useState(false)
-  const [isFast, setIsFast] = useState(true)
   const [showNodeList, setShowNodeList] = useState(false)
   const [aiLoading, setAiLoading] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)

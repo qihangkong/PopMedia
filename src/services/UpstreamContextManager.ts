@@ -1,5 +1,31 @@
 import type { Node, Edge } from '@xyflow/react'
 
+/**
+ * Extract content from a node based on its type
+ */
+export function extractNodeContent(node: Node): string {
+  const data = node.data as {
+    type: 'text' | 'image' | 'video' | 'audio'
+    content?: string
+    imageUrl?: string
+    videoUrl?: string
+    audioUrl?: string
+  }
+
+  switch (data.type) {
+    case 'text':
+      return data.content || ''
+    case 'image':
+      return `[图片] ${data.imageUrl || '无URL'}`
+    case 'video':
+      return `[视频] ${data.videoUrl || '无URL'}`
+    case 'audio':
+      return `[音频] ${data.audioUrl || '无URL'}`
+    default:
+      return JSON.stringify(data)
+  }
+}
+
 export interface UpstreamNode {
   nodeId: string
   nodeLabel: string
@@ -25,7 +51,10 @@ export class UpstreamContextManager {
     const visited = new Set<string>()
     const result: UpstreamNode[] = []
 
-    this.traverse(nodeId, 0, maxDepth, visited, result, nodes, edges)
+    // Build node lookup map for O(1) access
+    const nodeMap = new Map(nodes.map(n => [n.id, n]))
+
+    this.traverse(nodeId, 0, maxDepth, visited, result, nodeMap, edges)
 
     return result
   }
@@ -36,7 +65,7 @@ export class UpstreamContextManager {
     maxDepth: number,
     visited: Set<string>,
     result: UpstreamNode[],
-    nodes: Node[],
+    nodeMap: Map<string, Node>,
     edges: Edge[]
   ) {
     if (visited.has(currentId) || currentDepth > maxDepth) return
@@ -46,42 +75,19 @@ export class UpstreamContextManager {
     const upstreamEdges = edges.filter(e => e.target === currentId)
 
     for (const edge of upstreamEdges) {
-      const sourceNode = nodes.find(n => n.id === edge.source)
+      const sourceNode = nodeMap.get(edge.source)
       if (!sourceNode) continue
 
       result.push({
         nodeId: sourceNode.id,
         nodeLabel: sourceNode.data.label as string,
-        content: this.extractContent(sourceNode),
+        content: extractNodeContent(sourceNode),
         type: sourceNode.data.type as 'text' | 'image' | 'video' | 'audio',
         distance: currentDepth + 1
       })
 
       // 递归追溯更上游的节点
-      this.traverse(sourceNode.id, currentDepth + 1, maxDepth, visited, result, nodes, edges)
-    }
-  }
-
-  private static extractContent(node: Node): string {
-    const data = node.data as {
-      type: 'text' | 'image' | 'video' | 'audio'
-      content?: string
-      imageUrl?: string
-      videoUrl?: string
-      audioUrl?: string
-    }
-
-    switch (data.type) {
-      case 'text':
-        return data.content || ''
-      case 'image':
-        return `[图片] ${data.imageUrl || '无URL'}`
-      case 'video':
-        return `[视频] ${data.videoUrl || '无URL'}`
-      case 'audio':
-        return `[音频] ${data.audioUrl || '无URL'}`
-      default:
-        return JSON.stringify(data)
+      this.traverse(sourceNode.id, currentDepth + 1, maxDepth, visited, result, nodeMap, edges)
     }
   }
 

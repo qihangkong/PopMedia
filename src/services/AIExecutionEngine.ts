@@ -1,6 +1,6 @@
 import type { Node, Edge } from '@xyflow/react'
 import { sendChatMessage } from '../utils/chatApi'
-import { UpstreamContextManager } from './UpstreamContextManager'
+import { UpstreamContextManager, extractNodeContent } from './UpstreamContextManager'
 import { IntentClassifier, Intent } from './IntentClassifier'
 import type { ExecutionState, ChatMessage, NodeAIConfig } from '../types/ai'
 
@@ -171,7 +171,7 @@ export class AIExecutionEngine {
 
     const mentionedNodes = nodes.filter(n => mentionNodeIds.includes(n.id))
     const context = mentionedNodes.map(n => {
-      return `[${n.data.label}]\n${this.extractContent(n)}`
+      return `[${n.data.label}]\n${extractNodeContent(n)}`
     }).join('\n\n')
 
     const fullPrompt = `## 引用内容\n${context}\n\n## 用户指令\n${userInput}`
@@ -196,28 +196,5 @@ export class AIExecutionEngine {
     }
 
     return `${systemPrompt}\n\n${userContent}`
-  }
-
-  private static extractContent(node: Node): string {
-    const data = node.data as {
-      type: 'text' | 'image' | 'video' | 'audio'
-      content?: string
-      imageUrl?: string
-      videoUrl?: string
-      audioUrl?: string
-    }
-
-    switch (data.type) {
-      case 'text':
-        return data.content || ''
-      case 'image':
-        return `[图片] ${data.imageUrl || '无URL'}`
-      case 'video':
-        return `[视频] ${data.videoUrl || '无URL'}`
-      case 'audio':
-        return `[音频] ${data.audioUrl || '无URL'}`
-      default:
-        return JSON.stringify(data)
-    }
   }
 }
