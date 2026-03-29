@@ -51,7 +51,7 @@ export function NodeAIDialog({ nodeId, onClose }: NodeAIDialogProps) {
         setSelectedModel(savedModel || configs[0].model_name)
       }
     }).catch(console.error)
-  }, [node])
+  }, [nodeId, node?.data])
 
   useEffect(() => {
     textareaRef.current?.focus()
