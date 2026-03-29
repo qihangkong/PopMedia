@@ -33,10 +33,15 @@ export function invalidateLlmConfigCache() {
   cacheTimestamp = 0
 }
 
+// Export cached version for use by other modules
+export { getLlmConfigs }
+
 /**
  * Send a chat message to the configured LLM and get a response
+ * @param content The message content to send
+ * @param modelName Optional specific model to use. If not provided, uses the first configured LLM.
  */
-export async function sendChatMessage(content: string): Promise<string> {
+export async function sendChatMessage(content: string, modelName?: string): Promise<string> {
   try {
     const configs = await getLlmConfigs()
 
@@ -44,7 +49,13 @@ export async function sendChatMessage(content: string): Promise<string> {
       throw new Error('请先在设置中配置 LLM API')
     }
 
-    const config = configs[0]
+    // Find config by model name, or use first config
+    let config: LlmConfig
+    if (modelName) {
+      config = configs.find(c => c.model_name === modelName) || configs[0]
+    } else {
+      config = configs[0]
+    }
 
     if (!config.api_url || !config.api_key) {
       throw new Error('LLM API 配置不完整，请检查设置')

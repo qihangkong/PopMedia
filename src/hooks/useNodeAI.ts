@@ -14,7 +14,7 @@ export function useNodeAI(nodeId: string) {
   const executionRef = useRef<AbortController | null>(null)
 
   // 执行AI任务
-  const execute = useCallback(async (userInput: string, hiddenNodeIds: Set<string> = new Set()) => {
+  const execute = useCallback(async (userInput: string, hiddenNodeIds: Set<string> = new Set(), model?: string) => {
     const node = getNode(nodeId)
     if (!node) return
 
@@ -28,6 +28,7 @@ export function useNodeAI(nodeId: string) {
       nodes: getNodes(),
       edges: getEdges(),
       hiddenNodeIds,
+      model,
       onStateChange: setExecutionState,
     }
 

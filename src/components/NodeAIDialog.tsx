@@ -1,9 +1,11 @@
-import { useState, useCallback, useRef, useEffect } from 'react'
+import { useState, useCallback, useRef, useEffect, useMemo } from 'react'
 import { useReactFlow } from '@xyflow/react'
 import { useNodeAI } from '../hooks/useNodeAI'
 import { useUpstreamPreview } from '../hooks/useUpstreamPreview'
 import { ModelSelect } from './ModelSelect'
-import type { NodeAIConfig, ExecutionState } from '../types/ai'
+import { getLlmConfigs } from '../utils/chatApi'
+import type { LlmConfig } from '../utils/tauriApi'
+import type { ExecutionState, NodeAIConfig } from '../types/ai'
 
 interface NodeAIDialogProps {
   nodeId: string
@@ -29,12 +31,25 @@ export function NodeAIDialog({ nodeId, onClose }: NodeAIDialogProps) {
   const { getNode, getViewport } = useReactFlow()
   const [message, setMessage] = useState('')
   const [hiddenNodeIds, setHiddenNodeIds] = useState<Set<string>>(new Set())
+  const [llmConfigs, setLlmConfigs] = useState<LlmConfig[]>([])
+  const [selectedModel, setSelectedModel] = useState<string>('')
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
   const node = getNode(nodeId)
   const { upstreamNodes } = useUpstreamPreview(nodeId)
-  const aiConfig = (node?.data as { aiConfig?: NodeAIConfig })?.aiConfig
   const { executionState, execute, cancel, isExecuting } = useNodeAI(nodeId)
+
+  // Restore saved model from node config, or load from backend
+  useEffect(() => {
+    const savedModel = (node?.data as { aiConfig?: NodeAIConfig })?.aiConfig?.model
+
+    getLlmConfigs().then(configs => {
+      setLlmConfigs(configs)
+      if (configs.length > 0) {
+        setSelectedModel(savedModel || configs[0].model_name)
+      }
+    }).catch(console.error)
+  }, [node])
 
   useEffect(() => {
     textareaRef.current?.focus()
@@ -50,13 +65,13 @@ export function NodeAIDialog({ nodeId, onClose }: NodeAIDialogProps) {
 
   const handleSend = useCallback(async () => {
     if (message.trim() && !isExecuting) {
-      await execute(message.trim(), hiddenNodeIds)
+      await execute(message.trim(), hiddenNodeIds, selectedModel || undefined)
       setMessage('')
       if (textareaRef.current) {
         textareaRef.current.style.height = '48px'
       }
     }
-  }, [message, execute, isExecuting, hiddenNodeIds])
+  }, [message, execute, isExecuting, hiddenNodeIds, selectedModel])
 
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -82,13 +97,19 @@ export function NodeAIDialog({ nodeId, onClose }: NodeAIDialogProps) {
 
   if (!node) return null
 
-  if (!node) return null
-
   const viewport = getViewport()
   const screenX = node.position.x * viewport.zoom + viewport.x
   const screenY = node.position.y * viewport.zoom + viewport.y
   const nodeWidth = (node.measured?.width ?? node.width ?? 200) * viewport.zoom
   const nodeHeight = (node.measured?.height ?? node.height ?? 100) * viewport.zoom
+
+  const modelOptions = useMemo(() =>
+    llmConfigs.map(config => ({
+      value: config.model_name,
+      label: config.name || config.model_name,
+    })),
+    [llmConfigs]
+  )
 
   return (
     <div
@@ -134,14 +155,16 @@ export function NodeAIDialog({ nodeId, onClose }: NodeAIDialogProps) {
         )}
 
         {/* 模型选择 */}
-        <ModelSelect
-          value={aiConfig?.model || 'default'}
-          onChange={(val) => {
-            // TODO: 保存到 aiConfig
-            console.log('model changed:', val)
-          }}
-          disabled={isExecuting}
-        />
+        {modelOptions.length > 0 ? (
+          <ModelSelect
+            options={modelOptions}
+            value={selectedModel}
+            onChange={setSelectedModel}
+            disabled={isExecuting}
+          />
+        ) : (
+          <div className="model-select-empty">未配置模型</div>
+        )}
 
         {/* 节点标签 */}
         {upstreamNodes.length > 0 && (

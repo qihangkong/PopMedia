@@ -7,23 +7,17 @@ interface ModelOption {
 }
 
 interface ModelSelectProps {
+  options: ModelOption[]
   value: string
   onChange: (value: string) => void
   disabled?: boolean
 }
 
-const MODEL_OPTIONS: ModelOption[] = [
-  { value: 'default', label: '默认' },
-  { value: 'gpt-4', label: 'GPT-4' },
-  { value: 'gpt-3.5', label: 'GPT-3.5' },
-  { value: 'claude', label: 'Claude' },
-]
-
-export function ModelSelect({ value, onChange, disabled }: ModelSelectProps) {
+export function ModelSelect({ options, value, onChange, disabled }: ModelSelectProps) {
   const [isOpen, setIsOpen] = useState(false)
   const wrapperRef = useRef<HTMLDivElement>(null)
 
-  const selectedOption = MODEL_OPTIONS.find(opt => opt.value === value) || MODEL_OPTIONS[0]
+  const selectedOption = options.find(opt => opt.value === value) || options[0]
 
   const handleClose = useCallback(() => setIsOpen(false), [])
   useClickOutside(wrapperRef, handleClose, isOpen)
@@ -44,7 +38,7 @@ export function ModelSelect({ value, onChange, disabled }: ModelSelectProps) {
         onClick={() => !disabled && setIsOpen(!isOpen)}
         disabled={disabled}
       >
-        <span>{selectedOption.label}</span>
+        <span>{selectedOption?.label || '选择模型'}</span>
         <svg
           className={`model-select-arrow ${isOpen ? 'open' : ''}`}
           width="10"
@@ -64,7 +58,7 @@ export function ModelSelect({ value, onChange, disabled }: ModelSelectProps) {
 
       {isOpen && (
         <div className="model-select-dropdown">
-          {MODEL_OPTIONS.map(opt => (
+          {options.map(opt => (
             <button
               key={opt.value}
               type="button"

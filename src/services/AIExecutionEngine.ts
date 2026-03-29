@@ -73,6 +73,7 @@ export interface ExecutionOptions {
   nodes?: Node[]               // 所有节点(节点/跨节点模式)
   edges?: Edge[]               // 所有边(节点模式)
   hiddenNodeIds?: Set<string>  // 隐藏的节点ID，这些节点不会被获取
+  model?: string              // 指定的模型名称
   onStateChange?: (state: ExecutionState) => void
 }
 
@@ -81,15 +82,15 @@ export class AIExecutionEngine {
    * 执行AI任务
    */
   static async execute(options: ExecutionOptions): Promise<string> {
-    const { mode, userInput, ...rest } = options
+    const { mode, userInput, model, ...rest } = options
 
     switch (mode) {
       case ChatMode.GLOBAL_CHAT:
         return this.executeGlobalChat(userInput)
       case ChatMode.NODE_EXECUTE:
-        return this.executeNodeTask(userInput, rest.nodeId, rest.nodes, rest.edges, rest.hiddenNodeIds, rest.onStateChange)
+        return this.executeNodeTask(userInput, rest.nodeId, rest.nodes, rest.edges, rest.hiddenNodeIds, model, rest.onStateChange)
       case ChatMode.CROSS_NODE:
-        return this.executeCrossNode(userInput, rest.mentionNodeIds, rest.nodes, rest.onStateChange)
+        return this.executeCrossNode(userInput, rest.mentionNodeIds, rest.nodes, model, rest.onStateChange)
       default:
         throw new Error(`Unknown mode: ${mode}`)
     }
@@ -104,6 +105,7 @@ export class AIExecutionEngine {
     nodes: Node[] | undefined,
     edges: Edge[] | undefined,
     hiddenNodeIds: Set<string> | undefined,
+    model: string | undefined,
     onStateChange?: (state: ExecutionState) => void
   ): Promise<string> {
     if (!nodeId || !nodes || !edges) {
@@ -131,7 +133,7 @@ export class AIExecutionEngine {
 
       onStateChange?.({ status: 'generating', progress: '正在生成...' })
       const fullPrompt = this.buildPrompt(intent, upstreamContent, node.data)
-      const result = await sendChatMessage(fullPrompt)
+      const result = await sendChatMessage(fullPrompt, model)
 
       onStateChange?.({ status: 'completed', result, startTime: Date.now() })
       return result
@@ -158,6 +160,7 @@ export class AIExecutionEngine {
     userInput: string,
     mentionNodeIds: string[] | undefined,
     nodes: Node[] | undefined,
+    model: string | undefined,
     onStateChange?: (state: ExecutionState) => void
   ): Promise<string> {
     if (!mentionNodeIds || !nodes) {
@@ -172,7 +175,7 @@ export class AIExecutionEngine {
     }).join('\n\n')
 
     const fullPrompt = `## 引用内容\n${context}\n\n## 用户指令\n${userInput}`
-    return await sendChatMessage(fullPrompt)
+    return await sendChatMessage(fullPrompt, model)
   }
 
   private static buildPrompt(
