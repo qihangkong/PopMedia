@@ -2538,6 +2538,140 @@ body {
   background: rgba(255, 255, 255, 0.2);
 }
 
+/* 嵌入节点内部的 AI 输入框 */
+.node-ai-input {
+  position: absolute;
+  left: 0;
+  top: 100%;
+  margin-top: 8px;
+  width: 100%;
+  min-width: 280px;
+  max-width: 400px;
+  display: flex;
+  flex-direction: column;
+  background: rgba(30, 30, 30, 0.98);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(16px);
+  animation: fadeInUp 0.15s ease;
+  z-index: 100;
+}
+
+.node-ai-input-row {
+  display: flex;
+  padding: 8px;
+}
+
+.node-ai-input-textarea {
+  flex: none;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: #fff;
+  font-size: 14px;
+  font-family: inherit;
+  line-height: 1.5;
+  resize: none;
+  padding: 8px;
+  overflow: hidden;
+  min-height: 48px;
+  height: 48px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.node-ai-input-textarea::placeholder {
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.node-ai-input-controls-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  flex-wrap: wrap;
+}
+
+.node-ai-input-controls-row .node-tags-row {
+  flex: 1;
+}
+
+.node-ai-input-send {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  background: linear-gradient(135deg, #6366f1 0%, #818cf8 100%);
+  border: none;
+  border-radius: 6px;
+  color: #fff;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+}
+
+.node-ai-input-send:hover:not(:disabled) {
+  transform: scale(1.05);
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
+}
+
+.node-ai-input-send:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.node-ai-input-status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+}
+
+.node-ai-input-status .status-text {
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.node-ai-input-status.pending .status-text {
+  color: #fbbf24;
+}
+
+.node-ai-input-status.generating .status-text {
+  color: #6366f1;
+}
+
+.node-ai-input-status.completed .status-text {
+  color: #22c55e;
+}
+
+.node-ai-input-status.error .status-text {
+  color: #ef4444;
+}
+
+.node-ai-input-status .cancel-btn {
+  background: rgba(255, 255, 255, 0.1);
+  border: none;
+  border-radius: 4px;
+  color: #fff;
+  font-size: 10px;
+  padding: 2px 6px;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.node-ai-input-status .cancel-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+/* AI 按钮高亮 */
+.node-action-btn.ai-btn.active {
+  background: rgba(99, 102, 241, 0.3);
+  border-color: rgba(99, 102, 241, 0.6);
+}
+
 /* 节点标签 */
 .node-tag {
   display: flex;

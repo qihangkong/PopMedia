@@ -24,7 +24,6 @@ import { VideoNode } from '../components/VideoNode'
 import { AudioNode } from '../components/AudioNode'
 import { ImagePreviewModal, VideoPreviewModal } from '../components/CanvasModals'
 import { AddNodeMenu } from '../components/AddNodeMenu'
-import { NodeAIDialog } from '../components/NodeAIDialog'
 import {
   GRID_SIZE,
   GRID_SNAP,
@@ -119,7 +118,6 @@ export default function Canvas() {
   const [showMinimap, setShowMinimap] = useState(true)
   const [snapToGrid, setSnapToGrid] = useState(false)
   const [zoom, setZoom] = useState(DEFAULT_ZOOM)
-  const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null)
 
   // Add node menu state for connection drag
   const [addNodeMenu, setAddNodeMenu] = useState<{
@@ -222,16 +220,6 @@ export default function Canvas() {
     [addNodeMenu, getViewport, addNodeWithConnection, addNode]
   )
 
-  const handleSelectionChange = useCallback((params: { nodes: { id: string }[] }) => {
-    if (params.nodes.length === 1) {
-      setSelectedNodeId(params.nodes[0].id)
-    } else {
-      setSelectedNodeId(null)
-    }
-  }, [])
-
-  // NodeAIDialog 现在内部处理 AI 执行，这里只需关闭对话框
-
   const handlePaneContextMenu = useCallback((event: MouseEvent | React.MouseEvent) => {
     event.preventDefault()
     const target = event.target as HTMLElement
@@ -281,7 +269,6 @@ export default function Canvas() {
         style={{ background: '#1a1a1a', position: 'relative' }}
         onPaneClick={() => window.dispatchEvent(new CustomEvent('closeAllMenus'))}
         onPaneContextMenu={handlePaneContextMenu}
-        onSelectionChange={handleSelectionChange}
       >
         <Background
           variant={BackgroundVariant.Dots}
@@ -319,13 +306,6 @@ export default function Canvas() {
 
       <ImagePreviewModal imageUrl={previewImage} onClose={() => setPreviewImage(null)} />
       <VideoPreviewModal videoUrl={previewVideo} onClose={() => setPreviewVideo(null)} />
-
-      {selectedNodeId && (
-        <NodeAIDialog
-          nodeId={selectedNodeId}
-          onClose={() => setSelectedNodeId(null)}
-        />
-      )}
 
       {addNodeMenu && (
         <AddNodeMenu

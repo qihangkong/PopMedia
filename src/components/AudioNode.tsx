@@ -2,6 +2,7 @@ import { useRef, memo, useState } from 'react'
 import { Handle, Position } from '@xyflow/react'
 import { NodeHeader } from './NodeHeader'
 import { ResizeHandle } from './ResizeHandle'
+import { NodeAIInput } from './NodeAIInput'
 import { useNodeUpdates } from '../hooks/useNodeUpdates'
 import { useMediaUrl } from '../hooks/useMediaUrl'
 import { UploadIcon, DeleteIcon } from '../icons'
@@ -126,6 +127,7 @@ export const AudioNode = memo(function AudioNode({ data, selected, id }: AudioNo
         }}
       />
       <ResizeHandle nodeId={id} onResize={onResize} />
+      <NodeAIInput nodeId={id} visible={selected} />
     </div>
   )
 })

@@ -2,6 +2,7 @@ import { useRef, memo } from 'react'
 import { Handle, Position } from '@xyflow/react'
 import { NodeHeader } from './NodeHeader'
 import { ResizeHandle } from './ResizeHandle'
+import { NodeAIInput } from './NodeAIInput'
 import { useNodeUpdates } from '../hooks/useNodeUpdates'
 import { NODE_TYPE_MAP } from '../nodeTypes'
 import { HANDLE_SIZE } from '../constants'
@@ -59,6 +60,7 @@ export const TextNode = memo(function TextNode({ data, selected, id }: TextNodeP
         }}
       />
       <ResizeHandle nodeId={id} onResize={onResize} />
+      <NodeAIInput nodeId={id} visible={selected} />
     </div>
   )
 })
