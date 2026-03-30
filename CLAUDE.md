@@ -11,11 +11,13 @@ PopMedia - Tauri 2.x desktop app, node-based canvas editor for multimedia + AI c
 ## Commands
 
 ```bash
-npm run dev      # Vite dev server (frontend only)
-npm run build    # Build frontend (tsc + vite build)
-tauri dev        # Full Tauri dev (frontend + backend)
-tauri build      # Production build
-npm run clean:db # Clean SQLite database
+npm run dev        # Tauri dev (frontend + backend)
+npm run build      # Tauri production build
+npm run clean:db   # Clean SQLite database
+npm run test        # Unit tests (vitest + cargo)
+npm run test:all    # All tests (vitest + cargo + playwright)
+npm run test:e2e    # Playwright e2e tests only
+npm run test:ui     # Vitest UI
 ```
 
 ## Architecture (Read on Demand)
