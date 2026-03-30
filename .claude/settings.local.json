@@ -7,7 +7,8 @@
       "Bash(npm install:*)",
       "Bash(npx tauri:*)",
       "Bash(cargo check:*)",
-      "Bash(npx tsc:*)"
+      "Bash(npx tsc:*)",
+      "Bash(npm test 2>&1)"
     ]
   }
 }
