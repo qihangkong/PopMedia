@@ -214,15 +214,12 @@ export async function getFileUrl(relativePath: string): Promise<string> {
 export interface SkillInfo {
   id: string
   name: string
-  description: string
-  system_prompt: string
-  needs_upstream: boolean
+  content: string
 }
 
 export interface SkillMeta {
   id: string
   name: string
-  description: string
 }
 
 // Get all skills
@@ -236,8 +233,8 @@ export async function getSkill(id: string): Promise<SkillInfo> {
 }
 
 // Save a skill
-export async function saveSkill(id: string, name: string, description: string, systemPrompt: string): Promise<void> {
-  return await invoke<void>('save_skill', { id, name, description, systemPrompt })
+export async function saveSkill(id: string, content: string): Promise<void> {
+  return await invoke<void>('save_skill', { id, content })
 }
 
 // Delete a skill

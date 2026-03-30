@@ -1742,6 +1742,143 @@ body {
 }
 
 /* ============================================================
+   Settings Tabs
+   ============================================================ */
+
+.settings-tabs {
+  display: flex;
+  gap: 8px;
+  padding: 16px 32px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.settings-tab {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 20px;
+  background: transparent;
+  border: none;
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition: all 0.2s ease;
+}
+
+.settings-tab:hover {
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.settings-tab.active {
+  color: #818cf8;
+  border-bottom-color: #818cf8;
+}
+
+.settings-tab svg {
+  flex-shrink: 0;
+}
+
+/* ============================================================
+   Skills Two Column Layout
+   ============================================================ */
+
+.skills-two-column {
+  display: grid;
+  grid-template-columns: 240px 1fr;
+  gap: 16px;
+  min-height: 300px;
+}
+
+.skills-list {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.skill-list-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  cursor: pointer;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  transition: background 0.15s ease;
+}
+
+.skill-list-item:last-child {
+  border-bottom: none;
+}
+
+.skill-list-item:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.skill-list-item.selected {
+  background: rgba(129, 140, 248, 0.15);
+  border-left: 3px solid #818cf8;
+}
+
+.skill-list-name {
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.skills-list-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  min-height: 100px;
+  color: rgba(255, 255, 255, 0.4);
+  font-size: 14px;
+}
+
+.skills-list-empty p {
+  margin: 0;
+}
+
+.skills-detail {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.skills-detail-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  min-height: 200px;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.skill-detail-content {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.skill-detail-body {
+  padding: 20px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.skill-raw-content {
+  margin: 0;
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.85);
+  white-space: pre-wrap;
+  word-break: break-word;
+  line-height: 1.6;
+  font-family: inherit;
+}
+
+/* ============================================================
    Home Page
    ============================================================ */
 

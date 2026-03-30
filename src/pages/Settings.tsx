@@ -11,8 +11,14 @@ import {
   deleteComfyuiConfig,
   testLlmConnection,
   testComfyuiConnection,
+  getSkills,
+  getSkill,
+  saveSkill,
+  deleteSkill,
+  type SkillInfo,
 } from '../utils/tauriApi'
 import { invalidateLlmConfigCache } from '../utils/chatApi'
+import { skillRegistry } from '../services/SkillRegistry'
 import { useNotification } from '../contexts/NotificationContext'
 import {
   BrainIcon,
@@ -22,6 +28,7 @@ import {
   KeyIcon,
   CpuIcon,
   ServerIcon,
+  SkillIcon,
 } from '../icons'
 
 type ConnectionStatus = 'untested' | 'testing' | 'success' | 'failed'
@@ -36,17 +43,24 @@ interface ComfyuiConfigWithStatus extends ComfyuiConfig {
   connectionMessage?: string
 }
 
+type TabType = 'api' | 'skills'
 
 export default function Settings() {
-  const { error: notifyError } = useNotification()
+  const { error: notifyError, success: notifySuccess } = useNotification()
+  const [activeTab, setActiveTab] = useState<TabType>('api')
   const [llmConfigs, setLlmConfigs] = useState<LlmConfigWithStatus[]>([])
   const [comfyuiConfigs, setComfyuiConfigs] = useState<ComfyuiConfigWithStatus[]>([])
   const [editingId, setEditingId] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
 
+  // Skill states
+  const [skills, setSkills] = useState<SkillInfo[]>([])
+  const [selectedSkillId, setSelectedSkillId] = useState<string | null>(null)
+
   // Load configs from database on mount
   useEffect(() => {
     loadConfigs()
+    loadSkills()
   }, [])
 
   const loadConfigs = async () => {
@@ -62,6 +76,24 @@ export default function Settings() {
       notifyError('加载配置失败')
     } finally {
       setLoading(false)
+    }
+  }
+
+  const loadSkills = async () => {
+    try {
+      const skillList = await getSkills()
+      const skillInfos = await Promise.all(
+        skillList.map(async (s) => {
+          try {
+            return await getSkill(s.id)
+          } catch {
+            return null
+          }
+        })
+      )
+      setSkills(skillInfos.filter((s): s is SkillInfo => s !== null))
+    } catch {
+      notifyError('加载 skills 失败')
     }
   }
 
@@ -161,7 +193,6 @@ export default function Settings() {
       const config = llmConfigs.find(c => c.id === id)
       if (!config) return
 
-      // Update status to testing - use functional update to avoid stale state
       setLlmConfigs(prev => prev.map(c =>
         c.id === id ? { ...c, connectionStatus: 'testing' as ConnectionStatus, connectionMessage: undefined } : c
       ))
@@ -181,7 +212,6 @@ export default function Settings() {
       const config = comfyuiConfigs.find(c => c.id === id)
       if (!config) return
 
-      // Update status to testing - use functional update to avoid stale state
       setComfyuiConfigs(prev => prev.map(c =>
         c.id === id ? { ...c, connectionStatus: 'testing' as ConnectionStatus, connectionMessage: undefined } : c
       ))
@@ -197,6 +227,35 @@ export default function Settings() {
           c.id === id ? { ...c, connectionStatus: 'failed' as ConnectionStatus, connectionMessage: errorMessage } : c
         ))
       }
+    }
+  }
+
+  // Skill handlers
+  const handleAddSkill = async () => {
+    const name = prompt('输入 Skill 名称：')
+    if (!name || !name.trim()) return
+
+    const id = name.toLowerCase().replace(/\s+/g, '-')
+    const defaultContent = `# ${name}\n\n---\n\n输入你的 system prompt...`
+
+    try {
+      await saveSkill(id, defaultContent)
+      await loadSkills()
+      setSelectedSkillId(id)
+      notifySuccess('Skill 创建成功')
+    } catch {
+      notifyError('创建 Skill 失败')
+    }
+  }
+
+  const handleDeleteSkill = async (id: string) => {
+    try {
+      await deleteSkill(id)
+      setSkills(prev => prev.filter(s => s.id !== id))
+      await skillRegistry.reload()
+      notifySuccess('Skill 删除成功')
+    } catch {
+      notifyError('删除 Skill 失败')
     }
   }
 
@@ -217,208 +276,319 @@ export default function Settings() {
     <div className="page-container">
       <HeaderBar />
       <div className="settings-page">
+        {/* Tab Navigation */}
+        <div className="settings-tabs">
+          <button
+            className={`settings-tab ${activeTab === 'api' ? 'active' : ''}`}
+            onClick={() => setActiveTab('api')}
+          >
+            <SettingsIconAlias />
+            API 设置
+          </button>
+          <button
+            className={`settings-tab ${activeTab === 'skills' ? 'active' : ''}`}
+            onClick={() => setActiveTab('skills')}
+          >
+            <SkillIcon />
+            SKILL 设置
+          </button>
+        </div>
+
         <div className="settings-content">
-          {/* Add buttons */}
-          <div className="settings-buttons">
-            <button className="settings-add-btn" onClick={handleAddLLM}>
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M5 12h14"></path>
-                <path d="M12 5v14"></path>
-              </svg>
-              添加大语言模型
-            </button>
-            <button className="settings-add-btn" onClick={handleAddComfyUI}>
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M5 12h14"></path>
-                <path d="M12 5v14"></path>
-              </svg>
-              添加ComfyUI配置
-            </button>
-          </div>
-
-          {/* LLM Section */}
-          {llmConfigs.length > 0 && (
-            <div className="settings-section-group">
-              <div className="settings-section-title">
-                <BrainIcon />
-                <span>大语言模型</span>
+          {activeTab === 'api' && (
+            <>
+              {/* Add buttons */}
+              <div className="settings-buttons">
+                <button className="settings-add-btn" onClick={handleAddLLM}>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M5 12h14"></path>
+                    <path d="M12 5v14"></path>
+                  </svg>
+                  添加大语言模型
+                </button>
+                <button className="settings-add-btn" onClick={handleAddComfyUI}>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M5 12h14"></path>
+                    <path d="M12 5v14"></path>
+                  </svg>
+                  添加ComfyUI配置
+                </button>
               </div>
-              <div className="settings-section">
-                {llmConfigs.map(config => (
-                  <div key={config.id} className="model-card">
-                    <div className="section-header">
-                      <div className="section-icon">
-                        <BrainIcon />
+
+              {/* LLM Section */}
+              {llmConfigs.length > 0 && (
+                <div className="settings-section-group">
+                  <div className="settings-section-title">
+                    <BrainIcon />
+                    <span>大语言模型</span>
+                  </div>
+                  <div className="settings-section">
+                    {llmConfigs.map(config => (
+                      <div key={config.id} className="model-card">
+                        <div className="section-header">
+                          <div className="section-icon">
+                            <BrainIcon />
+                          </div>
+                          <input
+                            type="text"
+                            className="model-name-input"
+                            value={config.name}
+                            onChange={(e) => handleUpdateLLM(config.id, 'name', e.target.value)}
+                            disabled={editingId !== config.id}
+                          />
+                          <div className="model-card-actions-inline">
+                            <button
+                              className={`test-connection-btn ${config.connectionStatus}`}
+                              onClick={() => handleTestConnection('llm', config.id)}
+                              disabled={config.connectionStatus === 'testing'}
+                            >
+                              <span className={`status-indicator ${config.connectionStatus}`}></span>
+                              {config.connectionStatus === 'testing' ? '测试中...' : config.connectionStatus === 'success' ? '连接成功' : config.connectionStatus === 'failed' ? '连接失败' : '连接测试'}
+                            </button>
+                            <button
+                              className="edit-action-btn"
+                              onClick={() => handleEditLLM(config.id)}
+                            >
+                              <SettingsIconAlias />
+                            </button>
+                            <button
+                              className="delete-model-btn"
+                              onClick={() => handleDeleteLLM(config.id)}
+                            >
+                              <TrashIcon />
+                            </button>
+                          </div>
+                        </div>
+                        <div className="config-block">
+                          <div className="config-fields">
+                            <div className="field-group">
+                              <label>API URL</label>
+                              <div className="input-wrapper">
+                                <GlobeIcon />
+                                <input
+                                  type="text"
+                                  className="config-input"
+                                  placeholder="https://api.example.com/v1"
+                                  value={config.api_url}
+                                  onChange={(e) => handleUpdateLLM(config.id, 'api_url', e.target.value)}
+                                  disabled={editingId !== config.id}
+                                />
+                              </div>
+                            </div>
+                            <div className="field-group">
+                              <label>API Key</label>
+                              <div className="input-wrapper">
+                                <KeyIcon />
+                                <input
+                                  type="password"
+                                  className="config-input"
+                                  placeholder="输入您的 API Key"
+                                  value={config.api_key}
+                                  onChange={(e) => handleUpdateLLM(config.id, 'api_key', e.target.value)}
+                                  disabled={editingId !== config.id}
+                                />
+                              </div>
+                            </div>
+                            <div className="field-group">
+                              <label>Model Name</label>
+                              <div className="input-wrapper">
+                                <CpuIcon />
+                                <input
+                                  type="text"
+                                  className="config-input"
+                                  placeholder="gpt-4o"
+                                  value={config.model_name}
+                                  onChange={(e) => handleUpdateLLM(config.id, 'model_name', e.target.value)}
+                                  disabled={editingId !== config.id}
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        </div>
                       </div>
-                      <input
-                        type="text"
-                        className="model-name-input"
-                        value={config.name}
-                        onChange={(e) => handleUpdateLLM(config.id, 'name', e.target.value)}
-                        disabled={editingId !== config.id}
-                      />
-                      <div className="model-card-actions-inline">
-                        <button
-                          className={`test-connection-btn ${config.connectionStatus}`}
-                          onClick={() => handleTestConnection('llm', config.id)}
-                          disabled={config.connectionStatus === 'testing'}
-                        >
-                          <span className={`status-indicator ${config.connectionStatus}`}></span>
-                          {config.connectionStatus === 'testing' ? '测试中...' : config.connectionStatus === 'success' ? '连接成功' : config.connectionStatus === 'failed' ? '连接失败' : '连接测试'}
-                        </button>
-                        <button
-                          className="edit-action-btn"
-                          onClick={() => handleEditLLM(config.id)}
-                        >
-                          <SettingsIconAlias />
-                        </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* ComfyUI Section */}
+              {comfyuiConfigs.length > 0 && (
+                <div className="settings-section-group">
+                  <div className="settings-section-title">
+                    <ServerIcon />
+                    <span>ComfyUI配置</span>
+                  </div>
+                  <div className="settings-section">
+                    {comfyuiConfigs.map(config => (
+                      <div key={config.id} className="model-card">
+                        <div className="section-header">
+                          <div className="section-icon">
+                            <ServerIcon />
+                          </div>
+                          <input
+                            type="text"
+                            className="model-name-input"
+                            value={config.name}
+                            onChange={(e) => handleUpdateComfyUI(config.id, 'name', e.target.value)}
+                            disabled={editingId !== config.id}
+                          />
+                          <div className="model-card-actions-inline">
+                            <button
+                              className={`test-connection-btn ${config.connectionStatus}`}
+                              onClick={() => handleTestConnection('comfyui', config.id)}
+                              disabled={config.connectionStatus === 'testing'}
+                            >
+                              <span className={`status-indicator ${config.connectionStatus}`}></span>
+                              {config.connectionStatus === 'testing' ? '测试中...' : config.connectionStatus === 'success' ? '连接成功' : config.connectionStatus === 'failed' ? '连接失败' : '连接测试'}
+                            </button>
+                            <button
+                              className="edit-action-btn"
+                              onClick={() => handleEditComfyUI(config.id)}
+                            >
+                              <SettingsIconAlias />
+                            </button>
+                            <button
+                              className="delete-model-btn"
+                              onClick={() => handleDeleteComfyUI(config.id)}
+                            >
+                              <TrashIcon />
+                            </button>
+                          </div>
+                        </div>
+                        <div className="config-block">
+                          <div className="config-fields">
+                            <div className="field-group">
+                              <label>Host</label>
+                              <div className="input-wrapper">
+                                <GlobeIcon />
+                                <input
+                                  type="text"
+                                  className="config-input"
+                                  placeholder="127.0.0.1"
+                                  value={config.host}
+                                  onChange={(e) => handleUpdateComfyUI(config.id, 'host', e.target.value)}
+                                  disabled={editingId !== config.id}
+                                />
+                              </div>
+                            </div>
+                            <div className="field-group">
+                              <label>Port</label>
+                              <div className="input-wrapper">
+                                <CpuIcon />
+                                <input
+                                  type="text"
+                                  className="config-input"
+                                  placeholder="8188"
+                                  value={config.port}
+                                  onChange={(e) => handleUpdateComfyUI(config.id, 'port', e.target.value)}
+                                  disabled={editingId !== config.id}
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Empty state */}
+              {llmConfigs.length === 0 && comfyuiConfigs.length === 0 && (
+                <div className="settings-empty">
+                  <p>点击上方按钮添加配置</p>
+                </div>
+              )}
+            </>
+          )}
+
+          {activeTab === 'skills' && (
+            <>
+              {/* Skills list - two column layout */}
+              <div className="settings-section-group">
+                <div className="settings-section-title">
+                  <SkillIcon />
+                  <span>Skills</span>
+                </div>
+                <div className="skills-two-column">
+                  {/* Left column: skill list */}
+                  <div className="skills-list">
+                    {skills.length === 0 && (
+                      <div className="skills-list-empty">
+                        <p>暂无 Skills</p>
+                      </div>
+                    )}
+                    {skills.map(skill => (
+                      <div
+                        key={skill.id}
+                        className={`skill-list-item ${selectedSkillId === skill.id ? 'selected' : ''}`}
+                        onClick={() => setSelectedSkillId(skill.id)}
+                      >
+                        <span className="skill-list-name">{skill.name}</span>
                         <button
                           className="delete-model-btn"
-                          onClick={() => handleDeleteLLM(config.id)}
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            handleDeleteSkill(skill.id)
+                          }}
                         >
                           <TrashIcon />
                         </button>
                       </div>
-                    </div>
-                    <div className="config-block">
-                      <div className="config-fields">
-                        <div className="field-group">
-                          <label>API URL</label>
-                          <div className="input-wrapper">
-                            <GlobeIcon />
-                            <input
-                              type="text"
-                              className="config-input"
-                              placeholder="https://api.example.com/v1"
-                              value={config.api_url}
-                              onChange={(e) => handleUpdateLLM(config.id, 'api_url', e.target.value)}
-                              disabled={editingId !== config.id}
-                            />
-                          </div>
-                        </div>
-                        <div className="field-group">
-                          <label>API Key</label>
-                          <div className="input-wrapper">
-                            <KeyIcon />
-                            <input
-                              type="password"
-                              className="config-input"
-                              placeholder="输入您的 API Key"
-                              value={config.api_key}
-                              onChange={(e) => handleUpdateLLM(config.id, 'api_key', e.target.value)}
-                              disabled={editingId !== config.id}
-                            />
-                          </div>
-                        </div>
-                        <div className="field-group">
-                          <label>Model Name</label>
-                          <div className="input-wrapper">
-                            <CpuIcon />
-                            <input
-                              type="text"
-                              className="config-input"
-                              placeholder="gpt-4o"
-                              value={config.model_name}
-                              onChange={(e) => handleUpdateLLM(config.id, 'model_name', e.target.value)}
-                              disabled={editingId !== config.id}
-                            />
-                          </div>
-                        </div>
-                      </div>
-                    </div>
+                    ))}
                   </div>
-                ))}
-              </div>
-            </div>
-          )}
 
-          {/* ComfyUI Section */}
-          {comfyuiConfigs.length > 0 && (
-            <div className="settings-section-group">
-              <div className="settings-section-title">
-                <ServerIcon />
-                <span>ComfyUI配置</span>
-              </div>
-              <div className="settings-section">
-                {comfyuiConfigs.map(config => (
-                  <div key={config.id} className="model-card">
-                    <div className="section-header">
-                      <div className="section-icon">
-                        <ServerIcon />
-                      </div>
-                      <input
-                        type="text"
-                        className="model-name-input"
-                        value={config.name}
-                        onChange={(e) => handleUpdateComfyUI(config.id, 'name', e.target.value)}
-                        disabled={editingId !== config.id}
-                      />
-                      <div className="model-card-actions-inline">
-                        <button
-                          className={`test-connection-btn ${config.connectionStatus}`}
-                          onClick={() => handleTestConnection('comfyui', config.id)}
-                          disabled={config.connectionStatus === 'testing'}
-                        >
-                          <span className={`status-indicator ${config.connectionStatus}`}></span>
-                          {config.connectionStatus === 'testing' ? '测试中...' : config.connectionStatus === 'success' ? '连接成功' : config.connectionStatus === 'failed' ? '连接失败' : '连接测试'}
-                        </button>
-                        <button
-                          className="edit-action-btn"
-                          onClick={() => handleEditComfyUI(config.id)}
-                        >
-                          <SettingsIconAlias />
-                        </button>
-                        <button
-                          className="delete-model-btn"
-                          onClick={() => handleDeleteComfyUI(config.id)}
-                        >
-                          <TrashIcon />
-                        </button>
-                      </div>
-                    </div>
-                    <div className="config-block">
-                      <div className="config-fields">
-                        <div className="field-group">
-                          <label>Host</label>
-                          <div className="input-wrapper">
-                            <GlobeIcon />
-                            <input
-                              type="text"
-                              className="config-input"
-                              placeholder="127.0.0.1"
-                              value={config.host}
-                              onChange={(e) => handleUpdateComfyUI(config.id, 'host', e.target.value)}
-                              disabled={editingId !== config.id}
-                            />
+                  {/* Right column: skill content */}
+                  <div className="skills-detail">
+                    {selectedSkillId ? (
+                      (() => {
+                        const skill = skills.find(s => s.id === selectedSkillId)
+                        return skill ? (
+                          <div className="skill-detail-content">
+                            <div className="skill-detail-body">
+                              <pre className="skill-raw-content">{skill.content}</pre>
+                            </div>
                           </div>
-                        </div>
-                        <div className="field-group">
-                          <label>Port</label>
-                          <div className="input-wrapper">
-                            <CpuIcon />
-                            <input
-                              type="text"
-                              className="config-input"
-                              placeholder="8188"
-                              value={config.port}
-                              onChange={(e) => handleUpdateComfyUI(config.id, 'port', e.target.value)}
-                              disabled={editingId !== config.id}
-                            />
-                          </div>
-                        </div>
+                        ) : null
+                      })()
+                    ) : (
+                      <div className="skills-detail-empty">
+                        <p>选择左侧一个 Skill 查看详情</p>
                       </div>
-                    </div>
+                    )}
                   </div>
-                ))}
+                </div>
               </div>
-            </div>
-          )}
 
-          {/* Empty state */}
-          {llmConfigs.length === 0 && comfyuiConfigs.length === 0 && (
-            <div className="settings-empty">
-              <p>点击上方按钮添加配置</p>
-            </div>
+              {/* Add skill button */}
+              <button
+                className="settings-add-btn"
+                onClick={() => {
+                  const name = prompt('输入 Skill 名称：')
+                  if (name && name.trim()) {
+                    setNewSkillForm(prev => ({ ...prev, name: name.trim() }))
+                    const desc = prompt('输入 Skill 描述：')
+                    if (desc !== null) {
+                      setNewSkillForm(prev => ({ ...prev, description: desc || '' }))
+                      const prompt_text = prompt('输入 System Prompt：')
+                      if (prompt_text !== null) {
+                        setNewSkillForm(prev => ({ ...prev, prompt: prompt_text || '' }))
+                        // Delay to ensure form state is set
+                        setTimeout(() => {
+                          handleAddSkill()
+                        }, 100)
+                      }
+                    }
+                  }
+                }}
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M5 12h14"></path>
+                  <path d="M12 5v14"></path>
+                </svg>
+                添加 Skill
+              </button>
+            </>
           )}
         </div>
       </div>
