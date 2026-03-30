@@ -1,4 +1,4 @@
-export type NodeType = 'text' | 'image' | 'video' | 'audio' | 'group'
+export type NodeType = 'text' | 'image' | 'video' | 'audio' | 'script'
 
 // AI types (imported directly to ensure availability in this file)
 import type { NodeAIConfig, NodeRole } from './ai'

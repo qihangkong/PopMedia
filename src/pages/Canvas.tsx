@@ -22,7 +22,6 @@ import { TextNode } from '../components/TextNode'
 import { ImageNode } from '../components/ImageNode'
 import { VideoNode } from '../components/VideoNode'
 import { AudioNode } from '../components/AudioNode'
-import { GroupNode } from '../components/GroupNode'
 import { ImagePreviewModal, VideoPreviewModal } from '../components/CanvasModals'
 import { AddNodeMenu } from '../components/AddNodeMenu'
 import { useCanvasContext } from '../contexts/CanvasContext'
@@ -47,7 +46,6 @@ export const nodeTypes = {
   image: ImageNode,
   video: VideoNode,
   audio: AudioNode,
-  group: GroupNode,
 }
 
 function CustomBezierEdge({

@@ -1,4 +1,4 @@
-import { TypeIcon, ImageIcon, VideoIcon, MusicIcon, GroupIcon } from './icons'
+import { TypeIcon, ImageIcon, VideoIcon, MusicIcon, FileTextIcon } from './icons'
 
 // 节点类型元数据 — App.tsx、Sidebar.tsx、CSS class 统一引用此数据
 export interface NodeTypeMeta {
@@ -40,11 +40,12 @@ export const NODE_TYPES_META: NodeTypeMeta[] = [
     placeholderText: '点击添加音频',
   },
   {
-    id: 'group',
-    label: '分组',
-    desc: '将多个节点放入一个容器',
-    icon: GroupIcon,
-    placeholderText: '拖拽节点到分组内',
+    id: 'script',
+    label: '脚本',
+    desc: '创意脚本、生成故事板',
+    icon: FileTextIcon,
+    badge: 'Beta',
+    placeholderText: '点击添加脚本',
   },
 ]
 

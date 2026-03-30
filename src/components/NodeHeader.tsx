@@ -39,28 +39,8 @@ export function NodeHeader({ id, type, label, onLabelChange }: NodeHeaderProps) 
   )
 
   const handleDelete = useCallback(() => {
-    if (type === 'group') {
-      // For group nodes, delete the group and all its children
-      setNodes((nds) => {
-        // Find all descendant node IDs (children of this group)
-        const childIds = new Set<string>()
-        const findChildren = (parentId: string) => {
-          nds.forEach((n) => {
-            if (n.parentId === parentId) {
-              childIds.add(n.id)
-              findChildren(n.id)
-            }
-          })
-        }
-        findChildren(id)
-
-        // Filter out the group and all its children
-        return nds.filter((n) => n.id !== id && !childIds.has(n.id))
-      })
-    } else {
-      setNodes((nds) => nds.filter((n) => n.id !== id))
-    }
-  }, [setNodes, id, type])
+    setNodes((nds) => nds.filter((n) => n.id !== id))
+  }, [setNodes, id])
 
   return (
     <div className={`node-header ${type}-header`}>

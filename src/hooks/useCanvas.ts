@@ -7,8 +7,6 @@ import { addEdge } from '@xyflow/react'
 import {
   NODE_WIDTH,
   NODE_HEIGHT,
-  GROUP_DEFAULT_WIDTH,
-  GROUP_DEFAULT_HEIGHT,
   MAX_ZOOM,
   FIT_VIEW_PADDING,
 } from '../constants'
@@ -36,8 +34,6 @@ function createNodeData(type: NodeType, label?: string): NodeData {
       return { ...base, videoUrl: '' }
     case 'audio':
       return { ...base, audioUrl: '' }
-    case 'group':
-      return { ...base, childNodeIds: [] }
     default:
       return base
   }
@@ -131,15 +127,12 @@ export function useCanvasData() {
       }
 
       const nodeType = type as NodeType
-      const isGroup = nodeType === 'group'
-      const nodeWidth = isGroup ? GROUP_DEFAULT_WIDTH : NODE_WIDTH
-      const nodeHeight = isGroup ? GROUP_DEFAULT_HEIGHT : NODE_HEIGHT
       const newNode: Node = {
         id: `${Date.now()}`,
         type: nodeType,
         position: finalPosition,
         data: createNodeData(nodeType) as unknown as Record<string, unknown>,
-        style: { width: nodeWidth, height: nodeHeight },
+        style: { width: NODE_WIDTH, height: NODE_HEIGHT },
       }
       setNodes((nds) => [...nds, newNode])
       return newNode.id

@@ -49,6 +49,11 @@ export function AddNodeMenu({ x, y, onSelect, onClose }: AddNodeMenuProps) {
   }, [onClose])
 
   const handleSelect = (type: string) => {
+    if (type === 'script') {
+      // Script is Beta - TODO: implement notification system
+      onClose()
+      return
+    }
     onSelect(type)
   }
 
