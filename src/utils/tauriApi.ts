@@ -209,3 +209,38 @@ export async function getFileUrl(relativePath: string): Promise<string> {
   return convertFileSrc(fullPath)
 }
 
+// ==================== Skills API ====================
+
+export interface SkillInfo {
+  id: string
+  name: string
+  description: string
+  system_prompt: string
+  needs_upstream: boolean
+}
+
+export interface SkillMeta {
+  id: string
+  name: string
+  description: string
+}
+
+// Get all skills
+export async function getSkills(): Promise<SkillMeta[]> {
+  return await invoke<SkillMeta[]>('list_skills')
+}
+
+// Get a single skill by id
+export async function getSkill(id: string): Promise<SkillInfo> {
+  return await invoke<SkillInfo>('read_skill', { id })
+}
+
+// Save a skill
+export async function saveSkill(id: string, name: string, description: string, systemPrompt: string): Promise<void> {
+  return await invoke<void>('save_skill', { id, name, description, systemPrompt })
+}
+
+// Delete a skill
+export async function deleteSkill(id: string): Promise<void> {
+  return await invoke<void>('delete_skill', { id })
+}

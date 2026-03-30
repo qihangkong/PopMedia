@@ -4,6 +4,7 @@ pub mod connections;
 pub mod http;
 pub mod projects;
 pub mod settings;
+pub mod skills;
 
 use rusqlite::Connection;
 use std::sync::Mutex;
@@ -22,3 +23,4 @@ pub use chat::*;
 pub use connections::*;
 pub use projects::*;
 pub use settings::*;
+pub use skills::*;

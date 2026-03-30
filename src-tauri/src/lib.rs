@@ -9,6 +9,7 @@ mod tests;
 mod db_tests;
 
 use commands::http::create_http_client;
+use commands::skills::init_default_skills;
 use commands::AppState;
 use db::{get_db_path, init_database};
 use std::sync::Mutex;
@@ -37,6 +38,13 @@ pub fn run() {
             if let Some(app_data) = dirs::data_local_dir() {
                 let app_dir = app_data.join("PopMedia").join("projects");
                 let _ = std::fs::create_dir_all(&app_dir);
+
+                // Create skills directory
+                let skills_dir = app_data.join("PopMedia").join(".skills");
+                let _ = std::fs::create_dir_all(&skills_dir);
+
+                // Initialize default skills
+                let _ = init_default_skills();
 
                 // Setup logging
                 let log_dir = app_data.join("PopMedia").join("logs");
@@ -93,6 +101,11 @@ pub fn run() {
             commands::get_asset_path,
             // Chat
             commands::send_chat_message,
+            // Skills
+            commands::list_skills,
+            commands::read_skill,
+            commands::save_skill,
+            commands::delete_skill,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

@@ -3,6 +3,7 @@ import { ReactFlowProvider } from '@xyflow/react'
 import { Home, Projects, Canvas, Settings } from './pages'
 import { isTauri, getAppInfo } from './utils/tauriApi'
 import { initWindowManager } from './utils/windowManager'
+import { skillRegistry } from './services/SkillRegistry'
 import { useEffect } from 'react'
 import { ChatProvider } from './contexts/ChatContext'
 import { CanvasProvider } from './contexts/CanvasContext'
@@ -35,8 +36,10 @@ export default function App() {
     getAppInfo()
       .then(info => {
         if (isDev) console.log('[App] Tauri connected:', info)
-        return initWindowManager()
+        // 初始化 skill registry
+        return skillRegistry.initialize()
       })
+      .then(() => initWindowManager())
       .catch(err => console.error('[App] Tauri error:', err))
   }, [])
 

@@ -2,6 +2,7 @@ import type { Node, Edge } from '@xyflow/react'
 import { sendChatMessage } from '../utils/chatApi'
 import { UpstreamContextManager, extractNodeContent } from './UpstreamContextManager'
 import { IntentClassifier, Intent } from './IntentClassifier'
+import { skillRegistry } from './SkillRegistry'
 import type { ExecutionState, ChatMessage } from '../types/ai'
 import type { NodeData } from '../types'
 
@@ -188,9 +189,15 @@ export class AIExecutionEngine {
     nodeData: NodeData
   ): string {
     const aiConfig = nodeData.aiConfig
-    const systemPrompt = nodeData.systemPrompt ||
+
+    // 获取角色对应的 system prompt
+    const rolePrompt = nodeData.systemPrompt ||
       (aiConfig?.role ? ROLE_PROMPTS[aiConfig.role] : ROLE_PROMPTS['generator'])
 
+    // 获取 skills 上下文，让 AI 自行决定是否使用 skill
+    const skillsContext = skillRegistry.getSkillsContext()
+
+    // 构建用户内容
     let userContent = ''
 
     if (upstreamContent && upstreamContent !== '（无可用上游内容）') {
@@ -199,7 +206,8 @@ export class AIExecutionEngine {
       userContent = `## 用户指令\n${intent.customPrompt || intent.action}`
     }
 
-    return `${systemPrompt}\n\n${userContent}`
+    // 组合完整 prompt：skills 上下文 + 角色 prompt + 用户内容
+    return `${skillsContext}\n\n---\n\n${rolePrompt}\n\n${userContent}`
   }
 }
 

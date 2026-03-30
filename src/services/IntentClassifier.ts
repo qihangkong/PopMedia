@@ -38,15 +38,16 @@ const INTENT_PATTERNS: Record<string, { patterns: RegExp[], roles: NodeRole[] }>
 export class IntentClassifier {
   /**
    * 识别用户输入的意图
+   * 注意：skill 的选择现在由 AI 根据 skills 上下文自行决定
    */
   static classify(userInput: string, nodeRole?: NodeRole): Intent {
-    // 如果节点有预设角色，使用角色相关的action
+    // 1. 如果节点有预设角色，使用角色相关的action
     if (nodeRole) {
       const intent = this.classifyWithRole(userInput, nodeRole)
       if (intent.confidence > 0.8) return intent
     }
 
-    // 通用模式匹配
+    // 2. 通用模式匹配
     for (const [action, config] of Object.entries(INTENT_PATTERNS)) {
       for (const pattern of config.patterns) {
         if (pattern.test(userInput)) {
@@ -61,7 +62,7 @@ export class IntentClassifier {
       }
     }
 
-    // 无法识别，返回自定义意图
+    // 3. 无法识别，返回自定义意图
     return {
       action: 'custom',
       customPrompt: userInput,
