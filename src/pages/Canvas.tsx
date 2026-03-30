@@ -150,6 +150,7 @@ export default function Canvas() {
 
   // Canvas context for node events
   const {
+    setCanvasName: setContextCanvasName,
     contextMenu,
     onNodeContextMenu,
     clearContextMenu,
@@ -159,6 +160,11 @@ export default function Canvas() {
     onPreviewVideo,
     onCloseAllMenus,
   } = useCanvasContext()
+
+  // Sync canvasName to context for use by useNodeAI
+  useEffect(() => {
+    setContextCanvasName(canvasName)
+  }, [canvasName, setContextCanvasName])
 
   useCanvasAutoSave(canvasId, canvasName, nodes, edges, isInitializedRef, isLoading, saveCanvas)
 

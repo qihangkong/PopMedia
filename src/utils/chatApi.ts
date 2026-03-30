@@ -40,8 +40,17 @@ export { getLlmConfigs }
  * Send a chat message to the configured LLM and get a response
  * @param content The message content to send
  * @param modelName Optional specific model to use. If not provided, uses the first configured LLM.
+ * @param canvasName Optional canvas name for AI dialogue logging
+ * @param nodeName Optional node name for AI dialogue logging
+ * @param sessionId Optional session ID for per-session log file
  */
-export async function sendChatMessage(content: string, modelName?: string): Promise<string> {
+export async function sendChatMessage(
+  content: string,
+  modelName?: string,
+  canvasName?: string,
+  nodeName?: string,
+  sessionId?: string
+): Promise<string> {
   try {
     const configs = await getLlmConfigs()
 
@@ -64,6 +73,9 @@ export async function sendChatMessage(content: string, modelName?: string): Prom
     const result = await invoke<string>('send_chat_message', {
       config,
       message: content,
+      canvasName: canvasName || null,
+      nodeName: nodeName || null,
+      sessionId: sessionId || null,
     })
 
     return result

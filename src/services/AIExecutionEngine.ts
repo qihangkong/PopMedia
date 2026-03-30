@@ -76,6 +76,9 @@ export interface ExecutionOptions {
   edges?: Edge[]               // 所有边(节点模式)
   hiddenNodeIds?: Set<string>  // 隐藏的节点ID，这些节点不会被获取
   model?: string              // 指定的模型名称
+  canvasName?: string         // 画布名称(用于日志)
+  nodeName?: string           // 节点名称(用于日志)
+  sessionId?: string         // 会话ID(用于日志文件)
   onStateChange?: (state: ExecutionState) => void
 }
 
@@ -84,13 +87,13 @@ export class AIExecutionEngine {
    * 执行AI任务
    */
   async execute(options: ExecutionOptions): Promise<string> {
-    const { mode, userInput, model, ...rest } = options
+    const { mode, userInput, model, canvasName, nodeName, sessionId, ...rest } = options
 
     switch (mode) {
       case ChatMode.GLOBAL_CHAT:
         return this.executeGlobalChat(userInput)
       case ChatMode.NODE_EXECUTE:
-        return this.executeNodeTask(userInput, rest.nodeId, rest.nodes, rest.edges, rest.hiddenNodeIds, model, rest.onStateChange)
+        return this.executeNodeTask(userInput, rest.nodeId, rest.nodes, rest.edges, rest.hiddenNodeIds, model, canvasName, nodeName, sessionId, rest.onStateChange)
       case ChatMode.CROSS_NODE:
         return this.executeCrossNode(userInput, rest.mentionNodeIds, rest.nodes, model, rest.onStateChange)
       default:
@@ -108,6 +111,9 @@ export class AIExecutionEngine {
     edges: Edge[] | undefined,
     hiddenNodeIds: Set<string> | undefined,
     model: string | undefined,
+    canvasName: string | undefined,
+    nodeName: string | undefined,
+    sessionId: string | undefined,
     onStateChange?: (state: ExecutionState) => void
   ): Promise<string> {
     if (!nodeId || !nodes || !edges) {
@@ -137,7 +143,7 @@ export class AIExecutionEngine {
 
       onStateChange?.({ status: 'generating', progress: '正在生成...' })
       const fullPrompt = this.buildPrompt(intent, upstreamContent, nodeData)
-      const result = await sendChatMessage(fullPrompt, model)
+      const result = await sendChatMessage(fullPrompt, model, canvasName, nodeName, sessionId)
 
       onStateChange?.({ status: 'completed', result, startTime: Date.now() })
       return result

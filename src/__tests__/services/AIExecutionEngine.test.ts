@@ -190,7 +190,7 @@ describe('AIExecutionEngine', () => {
         model: 'custom-model',
       })
 
-      expect(sendChatMessage).toHaveBeenCalledWith(expect.any(String), 'custom-model')
+      expect(sendChatMessage).toHaveBeenCalledWith(expect.any(String), 'custom-model', undefined, undefined, undefined)
     })
 
     it('should call onStateChange with completed on success', async () => {

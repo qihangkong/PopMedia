@@ -2,11 +2,14 @@ import { useState, useCallback, useRef } from 'react'
 import { useReactFlow } from '@xyflow/react'
 import { aiExecutionEngine, ChatMode, ExecutionOptions } from '../services/AIExecutionEngine'
 import { useNodeUpdates } from './useNodeUpdates'
+import { useCanvasContext } from '../contexts/CanvasContext'
 import type { ExecutionState } from '../types/ai'
+import type { NodeData } from '../types'
 
 export function useNodeAI(nodeId: string) {
   const { getNode, getNodes, getEdges } = useReactFlow()
   const { updateContent } = useNodeUpdates(nodeId)
+  const { canvasName } = useCanvasContext()
 
   const [executionState, setExecutionState] = useState<ExecutionState>({
     status: 'idle'
@@ -21,6 +24,11 @@ export function useNodeAI(nodeId: string) {
     executionRef.current?.abort()
     executionRef.current = new AbortController()
 
+    const nodeData = node.data as unknown as NodeData
+    const nodeName = nodeData?.label || '未命名节点'
+    // Generate a unique session ID for this conversation
+    const sessionId = Math.random().toString(36).substring(2, 9)
+
     const options: ExecutionOptions = {
       mode: ChatMode.NODE_EXECUTE,
       userInput,
@@ -29,6 +37,9 @@ export function useNodeAI(nodeId: string) {
       edges: getEdges(),
       hiddenNodeIds,
       model,
+      canvasName,
+      nodeName,
+      sessionId,
       onStateChange: setExecutionState,
     }
 
@@ -39,7 +50,7 @@ export function useNodeAI(nodeId: string) {
     } catch (error) {
       console.error('AI execution failed:', error)
     }
-  }, [nodeId, getNode, getNodes, getEdges, updateContent])
+  }, [nodeId, getNode, getNodes, getEdges, updateContent, canvasName])
 
   // 取消执行
   const cancel = useCallback(() => {

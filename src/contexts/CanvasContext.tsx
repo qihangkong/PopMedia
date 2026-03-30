@@ -1,6 +1,9 @@
 import { createContext, useContext, useState, useCallback, ReactNode } from 'react'
 
 interface CanvasContextType {
+  // Canvas name for AI dialogue logging
+  canvasName: string
+  setCanvasName: (name: string) => void
   // 节点右键菜单
   contextMenu: { nodeId: string; nodeType: string; x: number; y: number } | null
   onNodeContextMenu: (nodeId: string, nodeType: string, x: number, y: number) => void
@@ -27,6 +30,7 @@ export function CanvasProvider({ children }: { children: ReactNode }) {
 
   const [previewImage, setPreviewImage] = useState<string | null>(null)
   const [previewVideo, setPreviewVideo] = useState<string | null>(null)
+  const [canvasName, setCanvasName] = useState<string>('未命名的画布')
 
   const onNodeContextMenu = useCallback((nodeId: string, nodeType: string, x: number, y: number) => {
     setContextMenu({ nodeId, nodeType, x, y })
@@ -53,6 +57,8 @@ export function CanvasProvider({ children }: { children: ReactNode }) {
   return (
     <CanvasContext.Provider
       value={{
+        canvasName,
+        setCanvasName,
         contextMenu,
         onNodeContextMenu,
         clearContextMenu,
