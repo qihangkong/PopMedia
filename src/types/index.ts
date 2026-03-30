@@ -1,9 +1,19 @@
-export type NodeType = 'text' | 'image' | 'video' | 'audio' | 'script'
+export type NodeType = 'text' | 'image' | 'video' | 'audio' | 'script' | 'block'
 
 // AI types (imported directly to ensure availability in this file)
 import type { NodeAIConfig, NodeRole } from './ai'
 export { NodeRole }
 export type { NodeAIConfig }
+
+// Block content item
+export interface BlockContent {
+  id: string
+  type: 'text' | 'image' | 'video' | 'audio'
+  content?: string
+  imageUrl?: string
+  videoUrl?: string
+  audioUrl?: string
+}
 
 // 节点数据 - 统一类型定义
 export interface NodeData {
@@ -15,6 +25,8 @@ export interface NodeData {
   imageUrl?: string
   videoUrl?: string
   audioUrl?: string
+  // 区块内容 (for block node)
+  contents?: BlockContent[]
   // AI 配置
   aiConfig?: NodeAIConfig
   systemPrompt?: string

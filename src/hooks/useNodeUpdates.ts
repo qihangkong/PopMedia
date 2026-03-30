@@ -61,7 +61,14 @@ export function useNodeUpdates(nodeId: string) {
   )
 
   const updateContents = useCallback(
-    (newContents: Array<{ id: string; content: string }>) => {
+    (newContents: Array<{
+      id: string
+      type?: string
+      content?: string
+      imageUrl?: string
+      videoUrl?: string
+      audioUrl?: string
+    }>) => {
       setNodes((nds) =>
         nds.map((node) => {
           if (node.id === nodeId) {
