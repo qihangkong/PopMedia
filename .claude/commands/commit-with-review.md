@@ -7,12 +7,14 @@ Run `git diff` and `git status` to review all changes. Analyze the changes and i
 - What files changed
 - The nature of the changes (feat, fix, refactor, test, etc.)
 - Any potential issues or concerns
+- **If issues found, fix them before proceeding**
 
 ## 2. Full Test
 Run `npm run test:all` to execute all tests:
 - Vitest (frontend unit tests)
 - Cargo test (Rust backend tests)
 - Playwright (E2E tests)
+- **If tests fail, fix them before committing**
 
 ## 3. Commit
 Only if ALL tests pass:
@@ -33,7 +35,7 @@ After commit, show the user:
 - Remaining uncommitted changes (if any)
 
 ## Error Handling
-If tests fail:
-1. Report which tests failed
-2. Do NOT commit
-3. Ask the user if they want to fix the issues first
+If code review or tests find issues:
+1. **Fix the issues first** - do not wait for user to fix them
+2. Re-run tests to verify fixes
+3. Only commit when all issues are resolved and tests pass
