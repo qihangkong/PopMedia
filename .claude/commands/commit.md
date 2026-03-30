@@ -1,23 +1,17 @@
-# Commit with Review Skill
+# Commit Skill
 
 When the user asks you to commit, you must follow this workflow:
 
+**IMPORTANT**: Before committing, you MUST run `/review` and `/testall` first.
+
 ## 1. Code Review
-Run `git diff` and `git status` to review all changes. Analyze the changes and identify:
-- What files changed
-- The nature of the changes (feat, fix, refactor, test, etc.)
-- Any potential issues or concerns
-- **If issues found, fix them before proceeding**
+Run `/review` to review all code changes.
 
 ## 2. Full Test
-Run `npm run test:all` to execute all tests:
-- Vitest (frontend unit tests)
-- Cargo test (Rust backend tests)
-- Playwright (E2E tests)
-- **If tests fail, fix them before committing**
+Run `/testall` to run all tests (vitest + cargo + playwright).
 
 ## 3. Commit
-Only if ALL tests pass:
+Only if review and tests pass:
 1. Stage relevant files (exclude generated files, lock files unless appropriate)
 2. Draft a clear commit message following conventional commits:
    - feat: new feature
@@ -37,5 +31,5 @@ After commit, show the user:
 ## Error Handling
 If code review or tests find issues:
 1. **Fix the issues first** - do not wait for user to fix them
-2. Re-run tests to verify fixes
+2. Re-run `/review` or `/testall` to verify fixes
 3. Only commit when all issues are resolved and tests pass

@@ -61,4 +61,6 @@ See `docs/ai-content-generation-design.md` for detailed AI system design.
 
 | Skill | When to Use |
 |-------|-------------|
-| `/commit` | When user asks to commit - runs code review, full tests, then commits only if all pass |
+| `/commit` | When user asks to commit - runs `/review` and `/testall` first, then commits only if all pass |
+| `/review` | When user asks to review code changes |
+| `/testall` | When user asks to run all tests (vitest + cargo + playwright) |
