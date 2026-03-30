@@ -363,6 +363,145 @@ body {
 .image-label-input { color: #34d399; }
 .video-label-input { color: #f472b6; }
 .audio-label-input { color: #fbbf24; }
+.group-label-input { color: #a78bfa; }
+
+/* ============================================================
+   Group Node
+   ============================================================ */
+
+/* React Flow group node wrapper - remove default styling */
+.react-flow__node-group {
+  background: transparent !important;
+  border: none !important;
+  border-radius: 0 !important;
+  padding: 0 !important;
+  overflow: visible;
+}
+
+.custom-node.group-node {
+  border: 2px dashed rgba(139, 92, 246, 0.5);
+  background: rgba(30, 30, 30, 0.15);
+  border-radius: 12px;
+}
+
+.custom-node.group-node:hover {
+  border-color: rgba(139, 92, 246, 0.8);
+}
+
+.custom-node.group-node.selected {
+  border-color: #8b5cf6;
+  border-style: solid;
+  box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.4);
+}
+
+.custom-node.group-node.drag-over {
+  border-color: #8b5cf6;
+  border-style: solid;
+  background: rgba(139, 92, 246, 0.1);
+}
+
+.group-header {
+  background: rgba(139, 92, 246, 0.08);
+  border-bottom: 1px solid rgba(139, 92, 246, 0.2);
+  color: #a78bfa;
+}
+
+.group-body {
+  position: relative;
+  flex: 1;
+  min-height: 50px;
+  border-radius: 0 0 10px 10px;
+}
+
+.group-empty-state {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: rgba(255, 255, 255, 0.3);
+  font-size: 12px;
+  pointer-events: none;
+}
+
+.group-add-btn {
+  position: absolute;
+  bottom: 8px;
+  right: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: 1px dashed rgba(139, 92, 246, 0.5);
+  background: rgba(139, 92, 246, 0.1);
+  color: #a78bfa;
+  border-radius: 6px;
+  cursor: pointer;
+  opacity: 0;
+  transition: all 0.15s ease;
+  padding: 0;
+}
+
+.group-body:hover .group-add-btn {
+  opacity: 1;
+}
+
+.group-add-btn:hover {
+  background: rgba(139, 92, 246, 0.2);
+  border-color: #8b5cf6;
+}
+
+/* Group Add Menu */
+.group-add-menu {
+  background: rgba(40, 40, 40, 0.98);
+  border: 1px solid rgba(139, 92, 246, 0.3);
+  border-radius: 8px;
+  padding: 6px;
+  min-width: 140px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.group-add-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 10px;
+  border: none;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.85);
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+  font-size: 13px;
+  text-align: left;
+}
+
+.group-add-menu-item:hover {
+  background: rgba(139, 92, 246, 0.2);
+}
+
+.group-add-menu-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  color: #a78bfa;
+}
+
+.group-add-menu-content {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.group-add-menu-label {
+  font-weight: 500;
+}
 
 .node-body {
   padding: 12px;

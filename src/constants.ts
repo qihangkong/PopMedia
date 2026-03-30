@@ -6,6 +6,14 @@ export const NODE_HEIGHT = 100
 export const NODE_MIN_WIDTH = 200
 export const NODE_MIN_HEIGHT = 80
 
+// 分组节点尺寸
+export const GROUP_DEFAULT_WIDTH = 400
+export const GROUP_DEFAULT_HEIGHT = 300
+export const GROUP_MIN_WIDTH = 200
+export const GROUP_MIN_HEIGHT = 150
+export const GROUP_PADDING = 20
+export const GROUP_HEADER_HEIGHT = 44
+
 // 手柄
 export const HANDLE_SIZE = 14
 export const HANDLE_RADIUS = HANDLE_SIZE / 2
