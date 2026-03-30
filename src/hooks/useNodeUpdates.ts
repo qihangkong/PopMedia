@@ -60,6 +60,20 @@ export function useNodeUpdates(nodeId: string) {
     [setNodes, nodeId]
   )
 
+  const updateContents = useCallback(
+    (newContents: Array<{ id: string; content: string }>) => {
+      setNodes((nds) =>
+        nds.map((node) => {
+          if (node.id === nodeId) {
+            return { ...node, data: { ...node.data, contents: newContents } }
+          }
+          return node
+        })
+      )
+    },
+    [setNodes, nodeId]
+  )
+
   const onResize = useCallback(
     (resizeNodeId: string, width: number, height: number) => {
       setNodes((nds) =>
@@ -74,5 +88,5 @@ export function useNodeUpdates(nodeId: string) {
     [setNodes]
   )
 
-  return { updateContent, updateImageUrl, updateVideoUrl, updateAudioUrl, onResize }
+  return { updateContent, updateImageUrl, updateVideoUrl, updateAudioUrl, updateContents, onResize }
 }

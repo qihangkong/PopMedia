@@ -22,7 +22,7 @@ import { getNodeMediaUrl } from '../types'
 
 // 创建节点数据的辅助函数
 function createNodeData(type: NodeType, label?: string): NodeData {
-  const defaultLabel = type === 'text' ? '文本节点' : `${type}节点`
+  const defaultLabel = type === 'text' ? '文本节点' : type === 'block' ? '区块节点' : `${type}节点`
   const base: NodeData = { type, label: label || defaultLabel }
 
   switch (type) {
@@ -34,6 +34,8 @@ function createNodeData(type: NodeType, label?: string): NodeData {
       return { ...base, videoUrl: '' }
     case 'audio':
       return { ...base, audioUrl: '' }
+    case 'block':
+      return { ...base, contents: [] }
     default:
       return base
   }

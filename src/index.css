@@ -363,6 +363,9 @@ body {
 .image-label-input { color: #34d399; }
 .video-label-input { color: #f472b6; }
 .audio-label-input { color: #fbbf24; }
+.block-label-input { color: #a78bfa; }
+
+.block-header  { color: #a78bfa; }
 
 .node-body {
   padding: 12px;
@@ -412,6 +415,109 @@ body {
 
 .text-node-content::placeholder {
   color: rgba(255, 255, 255, 0.3);
+}
+
+/* Block node styles */
+.block-node-body {
+  padding: 8px;
+  overflow-y: auto;
+  height: 100%;
+  box-sizing: border-box;
+}
+
+.block-container {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  height: 100%;
+}
+
+.block-item {
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 60px;
+}
+
+.block-item-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 4px 8px;
+  background: rgba(255, 255, 255, 0.05);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  flex-shrink: 0;
+}
+
+.block-item-index {
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.block-delete-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  background: transparent;
+  border: none;
+  color: rgba(255, 255, 255, 0.4);
+  cursor: pointer;
+  border-radius: 4px;
+  transition: all 0.15s ease;
+}
+
+.block-delete-btn:hover {
+  background: rgba(239, 68, 68, 0.2);
+  color: #ef4444;
+}
+
+.block-textarea {
+  width: 100%;
+  flex: 1;
+  min-height: 40px;
+  background: transparent;
+  border: none;
+  outline: none;
+  resize: none;
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 12px;
+  font-family: inherit;
+  line-height: 1.5;
+  padding: 8px;
+  box-sizing: border-box;
+}
+
+.block-textarea::placeholder {
+  color: rgba(255, 255, 255, 0.3);
+}
+
+.block-add-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  padding: 8px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px dashed rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+}
+
+.block-add-btn:hover {
+  background: rgba(167, 139, 250, 0.1);
+  border-color: #a78bfa;
+  color: #a78bfa;
 }
 
 /* ============================================================

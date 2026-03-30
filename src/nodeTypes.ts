@@ -1,4 +1,4 @@
-import { TypeIcon, ImageIcon, VideoIcon, MusicIcon } from './icons'
+import { TypeIcon, ImageIcon, VideoIcon, MusicIcon, BlockIcon } from './icons'
 
 // 节点类型元数据 — App.tsx、Sidebar.tsx、CSS class 统一引用此数据
 export interface NodeTypeMeta {
@@ -38,6 +38,13 @@ export const NODE_TYPES_META: NodeTypeMeta[] = [
     desc: '音效、配音、音乐',
     icon: MusicIcon,
     placeholderText: '点击添加音频',
+  },
+  {
+    id: 'block',
+    label: '区块',
+    desc: '多内容区块',
+    icon: BlockIcon,
+    placeholderText: '点击编辑内容',
   },
 ]
 
