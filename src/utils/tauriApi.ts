@@ -214,7 +214,9 @@ export async function getFileUrl(relativePath: string): Promise<string> {
 export interface SkillInfo {
   id: string
   name: string
-  content: string
+  description: string
+  body: string
+  needs_upstream: boolean
 }
 
 export interface SkillMeta {
@@ -240,4 +242,19 @@ export async function saveSkill(id: string, content: string): Promise<void> {
 // Delete a skill
 export async function deleteSkill(id: string): Promise<void> {
   return await invoke<void>('delete_skill', { id })
+}
+
+// Load skill references (Level 3: references/ or scripts/)
+export interface SkillReference {
+  name: string
+  content: string
+}
+
+export async function loadSkillReference(id: string, level: 'references' | 'scripts'): Promise<SkillReference[]> {
+  return await invoke<SkillReference[]>('load_skill_reference', { id, level })
+}
+
+// Read skill raw file content (including YAML frontmatter)
+export async function readSkillRaw(id: string): Promise<string> {
+  return await invoke<string>('read_skill_raw', { id })
 }

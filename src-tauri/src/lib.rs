@@ -104,6 +104,7 @@ pub fn run() {
             // Skills
             commands::list_skills,
             commands::read_skill,
+            commands::read_skill_raw,
             commands::save_skill,
             commands::delete_skill,
         ])

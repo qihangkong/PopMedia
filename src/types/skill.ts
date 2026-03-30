@@ -4,7 +4,7 @@ export interface Skill {
   id: string           // 文件名（不含扩展名），如 'script-converter'
   name: string         // 如 'script-converter'
   description: string  // 描述，用于 AI 判断何时使用
-  systemPrompt: string // 系统提示词内容
+  body: string         // 技能指令正文 (Level 2)
   needsUpstream: boolean // 是否需要上游内容
 }
 

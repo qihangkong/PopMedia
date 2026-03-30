@@ -15,6 +15,7 @@ import {
   getSkill,
   saveSkill,
   deleteSkill,
+  readSkillRaw,
   type SkillInfo,
 } from '../utils/tauriApi'
 import { invalidateLlmConfigCache } from '../utils/chatApi'
@@ -56,6 +57,7 @@ export default function Settings() {
   // Skill states
   const [skills, setSkills] = useState<SkillInfo[]>([])
   const [selectedSkillId, setSelectedSkillId] = useState<string | null>(null)
+  const [skillRawContents, setSkillRawContents] = useState<Map<string, string>>(new Map())
 
   // Load configs from database on mount
   useEffect(() => {
@@ -236,7 +238,14 @@ export default function Settings() {
     if (!name || !name.trim()) return
 
     const id = name.toLowerCase().replace(/\s+/g, '-')
-    const defaultContent = `# ${name}\n\n---\n\n输入你的 system prompt...`
+    const defaultContent = `---
+name: ${id}
+description: ${name}
+---
+
+# ${name}
+
+输入你的 skill 指令...`
 
     try {
       await saveSkill(id, defaultContent)
@@ -522,7 +531,18 @@ export default function Settings() {
                       <div
                         key={skill.id}
                         className={`skill-list-item ${selectedSkillId === skill.id ? 'selected' : ''}`}
-                        onClick={() => setSelectedSkillId(skill.id)}
+                        onClick={async () => {
+                          setSelectedSkillId(skill.id)
+                          // Load raw content when selected
+                          if (!skillRawContents.has(skill.id)) {
+                            try {
+                              const raw = await readSkillRaw(skill.id)
+                              setSkillRawContents(prev => new Map(prev).set(skill.id, raw))
+                            } catch (e) {
+                              console.error('Failed to load skill raw content:', e)
+                            }
+                          }
+                        }}
                       >
                         <span className="skill-list-name">{skill.name}</span>
                         <button
@@ -546,7 +566,7 @@ export default function Settings() {
                         return skill ? (
                           <div className="skill-detail-content">
                             <div className="skill-detail-body">
-                              <pre className="skill-raw-content">{skill.content}</pre>
+                              <pre className="skill-raw-content">{skillRawContents.get(selectedSkillId) ?? ''}</pre>
                             </div>
                           </div>
                         ) : null
@@ -563,24 +583,7 @@ export default function Settings() {
               {/* Add skill button */}
               <button
                 className="settings-add-btn"
-                onClick={() => {
-                  const name = prompt('输入 Skill 名称：')
-                  if (name && name.trim()) {
-                    setNewSkillForm(prev => ({ ...prev, name: name.trim() }))
-                    const desc = prompt('输入 Skill 描述：')
-                    if (desc !== null) {
-                      setNewSkillForm(prev => ({ ...prev, description: desc || '' }))
-                      const prompt_text = prompt('输入 System Prompt：')
-                      if (prompt_text !== null) {
-                        setNewSkillForm(prev => ({ ...prev, prompt: prompt_text || '' }))
-                        // Delay to ensure form state is set
-                        setTimeout(() => {
-                          handleAddSkill()
-                        }, 100)
-                      }
-                    }
-                  }
-                }}
+                onClick={handleAddSkill}
               >
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M5 12h14"></path>
