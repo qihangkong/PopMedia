@@ -2,6 +2,12 @@ mod commands;
 mod db;
 mod models;
 
+#[cfg(test)]
+mod tests;
+
+#[cfg(test)]
+mod db_tests;
+
 use commands::http::create_http_client;
 use commands::AppState;
 use db::{get_db_path, init_database};

@@ -22,6 +22,8 @@ export default function ChatDrawer() {
   const [inputValue, setInputValue] = useState('')
   const [showNodeList, setShowNodeList] = useState(false)
   const [aiLoading, setAiLoading] = useState(false)
+  const [isThinking, setIsThinking] = useState(false)
+  const [isFast, setIsFast] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
 
