@@ -54,3 +54,9 @@ See `docs/ai-content-generation-design.md` for detailed AI system design.
 - Constants in `constants.ts` - no magic numbers
 - Tauri commands in `src-tauri/src/commands/*.rs`
 - React contexts wrap providers in `App.tsx`: `CanvasProvider > ChatProvider > ReactFlowProvider`
+
+## User-Invocable Skills
+
+| Skill | When to Use |
+|-------|-------------|
+| `/commit` | When user asks to commit - runs code review, full tests, then commits only if all pass |
