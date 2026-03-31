@@ -16,11 +16,11 @@ const isDev = import.meta.env.DEV
 function CanvasWithProvider() {
   return (
     <CanvasProvider>
-      <ReactFlowProvider>
-        <ChatProvider>
+      <ChatProvider>
+        <ReactFlowProvider>
           <Canvas />
-        </ChatProvider>
-      </ReactFlowProvider>
+        </ReactFlowProvider>
+      </ChatProvider>
     </CanvasProvider>
   )
 }
