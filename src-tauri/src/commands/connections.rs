@@ -1,13 +1,13 @@
 use crate::commands::http::extract_content_from_response;
+use crate::commands::AppState;
 use crate::models::ComfyuiConfig;
 use crate::models::LlmConfig;
-use crate::commands::HttpClient;
 
 /// Test LLM API connection
 #[tauri::command]
 pub async fn test_llm_connection(
     config: LlmConfig,
-    http_client: tauri::State<'_, HttpClient>,
+    state: tauri::State<'_, AppState>,
 ) -> Result<String, String> {
     log::info!("开始测试 LLM 连接: {}", config.name);
     log::info!("API URL: {}", config.api_url);
@@ -23,7 +23,7 @@ pub async fn test_llm_connection(
 
     // Step 1: Check if /models endpoint is accessible
     log::info!("步骤 1: 检查 /models 端点...");
-    let models_response = http_client
+    let models_response = state.http_client
         .get(&format!("{}/models", api_url))
         .header("Authorization", format!("Bearer {}", config.api_key))
         .header("Content-Type", "application/json")
@@ -74,7 +74,7 @@ pub async fn test_llm_connection(
     log::info!("步骤 2: 发送测试消息到 /chat/completions...");
     log::debug!("请求体: {}", request_body);
 
-    let chat_response = http_client
+    let chat_response = state.http_client
         .post(&format!("{}/chat/completions", api_url))
         .header("Authorization", format!("Bearer {}", config.api_key))
         .header("Content-Type", "application/json")
@@ -132,7 +132,7 @@ pub async fn test_llm_connection(
 #[tauri::command]
 pub async fn test_comfyui_connection(
     config: ComfyuiConfig,
-    http_client: tauri::State<'_, HttpClient>,
+    state: tauri::State<'_, AppState>,
 ) -> Result<String, String> {
     if config.host.is_empty() {
         return Err("Host is required".to_string());
@@ -140,7 +140,7 @@ pub async fn test_comfyui_connection(
 
     let url = format!("http://{}:{}/system_stats", config.host, config.port);
 
-    let response = http_client
+    let response = state.http_client
         .get(&url)
         .timeout(std::time::Duration::from_secs(10))
         .send()

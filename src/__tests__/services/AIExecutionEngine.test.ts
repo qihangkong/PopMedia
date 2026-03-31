@@ -8,9 +8,17 @@ vi.mock('../../utils/chatApi', () => ({
   sendChatMessage: vi.fn().mockImplementation((_content: string, _model?: string) => {
     return Promise.resolve('mock AI response')
   }),
+  sendChatMessageWithTools: vi.fn().mockImplementation((_messages, _tools, _model?, _canvas?, _node?, _session?) => {
+    // Default mock returns a response without tool_calls (final response)
+    return Promise.resolve({
+      content: 'mock AI response',
+      tool_calls: undefined,
+      error: undefined,
+    })
+  }),
 }))
 
-import { sendChatMessage } from '../../utils/chatApi'
+import { sendChatMessage, sendChatMessageWithTools } from '../../utils/chatApi'
 
 // Helper to create mock nodes
 function createMockNode(id: string, label: string, content = 'Test content'): Node {
@@ -42,25 +50,21 @@ describe('AIExecutionEngine', () => {
 
   describe('execute', () => {
     it('should route to global chat for GLOBAL_CHAT mode', async () => {
-      const result = await engine.execute({
+      // GLOBAL_CHAT throws error as it's not yet implemented in agentic style
+      await expect(engine.execute({
         mode: ChatMode.GLOBAL_CHAT,
         userInput: 'Hello AI',
-      })
-
-      expect(result).toBe('mock AI response')
-      expect(sendChatMessage).toHaveBeenCalled()
-      // Check the first argument was passed correctly
-      expect(sendChatMessage).toHaveBeenCalledWith('Hello AI')
+      })).rejects.toThrow('Global chat mode not yet implemented in agentic style')
     })
 
-    it('should route to node execution for NODE_EXECUTE mode', async () => {
+    it('should route to node execution for NODE mode (agentic)', async () => {
       const nodes = [createMockNode('node1', 'Test Node', 'content')]
       const edges: Edge[] = []
 
       const onStateChange = vi.fn()
 
       const result = await engine.execute({
-        mode: ChatMode.NODE_EXECUTE,
+        mode: ChatMode.NODE_AGENTIC,
         userInput: 'process this',
         nodeId: 'node1',
         nodes,
@@ -69,19 +73,8 @@ describe('AIExecutionEngine', () => {
       })
 
       expect(result).toBe('mock AI response')
-    })
-
-    it('should route to cross-node execution for CROSS_NODE mode', async () => {
-      const nodes = [createMockNode('node1', 'Node 1'), createMockNode('node2', 'Node 2')]
-
-      const result = await engine.execute({
-        mode: ChatMode.CROSS_NODE,
-        userInput: 'compare these',
-        mentionNodeIds: ['node1', 'node2'],
-        nodes,
-      })
-
-      expect(result).toBe('mock AI response')
+      // Should use sendChatMessageWithTools for agentic mode
+      expect(sendChatMessageWithTools).toHaveBeenCalled()
     })
 
     it('should throw error for unknown mode', async () => {
@@ -93,13 +86,13 @@ describe('AIExecutionEngine', () => {
     })
   })
 
-  describe('executeNodeTask', () => {
+  describe('executeNodeTask (agentic mode)', () => {
     it('should throw error when nodeId is missing', async () => {
       const nodes = [createMockNode('node1', 'Test')]
       const edges: Edge[] = []
 
       await expect(engine.execute({
-        mode: ChatMode.NODE_EXECUTE,
+        mode: ChatMode.NODE_AGENTIC,
         userInput: 'test',
         nodeId: undefined,
         nodes,
@@ -109,7 +102,7 @@ describe('AIExecutionEngine', () => {
 
     it('should throw error when nodes is missing', async () => {
       await expect(engine.execute({
-        mode: ChatMode.NODE_EXECUTE,
+        mode: ChatMode.NODE_AGENTIC,
         userInput: 'test',
         nodeId: 'node1',
         nodes: undefined,
@@ -121,7 +114,7 @@ describe('AIExecutionEngine', () => {
       const nodes = [createMockNode('node1', 'Test')]
 
       await expect(engine.execute({
-        mode: ChatMode.NODE_EXECUTE,
+        mode: ChatMode.NODE_AGENTIC,
         userInput: 'test',
         nodeId: 'node1',
         nodes,
@@ -134,7 +127,7 @@ describe('AIExecutionEngine', () => {
       const edges: Edge[] = []
 
       await expect(engine.execute({
-        mode: ChatMode.NODE_EXECUTE,
+        mode: ChatMode.NODE_AGENTIC,
         userInput: 'test',
         nodeId: 'nonexistent',
         nodes,
@@ -142,55 +135,22 @@ describe('AIExecutionEngine', () => {
       })).rejects.toThrow('Node not found: nonexistent')
     })
 
-    it('should call onStateChange with pending during intent analysis', async () => {
+    it('should call onStateChange with pending then generating', async () => {
       const nodes = [createMockNode('node1', 'Test', 'content')]
       const edges: Edge[] = []
       const onStateChange = vi.fn()
 
       await engine.execute({
-        mode: ChatMode.NODE_EXECUTE,
-        userInput: 'summarize this',
-        nodeId: 'node1',
-        nodes,
-        edges,
-        onStateChange,
-      })
-
-      expect(onStateChange).toHaveBeenCalledWith({ status: 'pending', progress: '分析意图...' })
-    })
-
-    it('should call onStateChange with pending when getting upstream content', async () => {
-      const nodes = [createMockNode('node1', 'Test', 'content')]
-      const edges: Edge[] = []
-      const onStateChange = vi.fn()
-
-      await engine.execute({
-        mode: ChatMode.NODE_EXECUTE,
-        userInput: 'summarize upstream',
-        nodeId: 'node1',
-        nodes,
-        edges,
-        onStateChange,
-      })
-
-      // Should have called with getting upstream content since intent.needsUpstream is true
-      expect(onStateChange).toHaveBeenCalledWith({ status: 'pending', progress: '获取上游内容...' })
-    })
-
-    it('should use custom model when provided', async () => {
-      const nodes = [createMockNode('node1', 'Test', 'content')]
-      const edges: Edge[] = []
-
-      await engine.execute({
-        mode: ChatMode.NODE_EXECUTE,
+        mode: ChatMode.NODE_AGENTIC,
         userInput: 'test',
         nodeId: 'node1',
         nodes,
         edges,
-        model: 'custom-model',
+        onStateChange,
       })
 
-      expect(sendChatMessage).toHaveBeenCalledWith(expect.any(String), 'custom-model', undefined, undefined, undefined)
+      // First call should be pending with AI分析中
+      expect(onStateChange).toHaveBeenCalledWith({ status: 'pending', progress: 'AI分析中...' })
     })
 
     it('should call onStateChange with completed on success', async () => {
@@ -199,7 +159,7 @@ describe('AIExecutionEngine', () => {
       const onStateChange = vi.fn()
 
       await engine.execute({
-        mode: ChatMode.NODE_EXECUTE,
+        mode: ChatMode.NODE_AGENTIC,
         userInput: 'test',
         nodeId: 'node1',
         nodes,
@@ -213,14 +173,14 @@ describe('AIExecutionEngine', () => {
     })
 
     it('should call onStateChange with error on failure', async () => {
-      vi.mocked(sendChatMessage).mockRejectedValueOnce(new Error('API error'))
+      vi.mocked(sendChatMessageWithTools).mockRejectedValueOnce(new Error('API error'))
 
       const nodes = [createMockNode('node1', 'Test', 'content')]
       const edges: Edge[] = []
       const onStateChange = vi.fn()
 
       await expect(engine.execute({
-        mode: ChatMode.NODE_EXECUTE,
+        mode: ChatMode.NODE_AGENTIC,
         userInput: 'test',
         nodeId: 'node1',
         nodes,
@@ -232,73 +192,59 @@ describe('AIExecutionEngine', () => {
       expect(lastCall.status).toBe('error')
       expect(lastCall.error).toBe('API error')
     })
+
+    it('should use sendChatMessageWithTools for agentic mode', async () => {
+      const nodes = [createMockNode('node1', 'Test', 'content')]
+      const edges: Edge[] = []
+
+      await engine.execute({
+        mode: ChatMode.NODE_AGENTIC,
+        userInput: 'test',
+        nodeId: 'node1',
+        nodes,
+        edges,
+      })
+
+      expect(sendChatMessageWithTools).toHaveBeenCalled()
+      expect(sendChatMessage).not.toHaveBeenCalled()
+    })
+
+    it('should handle tool_calls in agentic loop', async () => {
+      // Mock that LLM returns a tool_call
+      vi.mocked(sendChatMessageWithTools).mockResolvedValueOnce({
+        content: '',
+        tool_calls: [
+          { name: 'read_node', arguments: { nodeId: 'node1' } }
+        ],
+        error: undefined,
+      }).mockResolvedValueOnce({
+        content: 'final response after tool',
+        tool_calls: undefined,
+        error: undefined,
+      })
+
+      const nodes = [createMockNode('node1', 'Test', 'content')]
+      const edges: Edge[] = []
+
+      const result = await engine.execute({
+        mode: ChatMode.NODE_AGENTIC,
+        userInput: 'read the node',
+        nodeId: 'node1',
+        nodes,
+        edges,
+      })
+
+      expect(result).toBe('final response after tool')
+      // Should have called twice - once for tool call, once for final response
+      expect(sendChatMessageWithTools).toHaveBeenCalledTimes(2)
+    })
   })
 
   describe('executeGlobalChat', () => {
-    it('should send message without context', async () => {
-      const result = await engine.executeGlobalChat('Hello world')
-
-      expect(result).toBe('mock AI response')
-      expect(sendChatMessage).toHaveBeenCalled()
-      // executeGlobalChat calls sendChatMessage with only one argument
-      expect(sendChatMessage).toHaveBeenCalledWith('Hello world')
-    })
-  })
-
-  describe('executeCrossNode', () => {
-    it('should throw error when mentionNodeIds is missing', async () => {
-      const nodes = [createMockNode('node1', 'Node 1')]
-
-      await expect(engine.executeCrossNode('compare', undefined, nodes)).rejects.toThrow(
-        'Cross-node task requires mentionNodeIds and nodes'
+    it('should throw error as not yet implemented', async () => {
+      await expect(engine.executeGlobalChat('Hello world')).rejects.toThrow(
+        'Global chat mode not yet implemented in agentic style'
       )
-    })
-
-    it('should throw error when nodes is missing', async () => {
-      await expect(engine.executeCrossNode('compare', ['node1'], undefined)).rejects.toThrow(
-        'Cross-node task requires mentionNodeIds and nodes'
-      )
-    })
-
-    it('should build context from mentioned nodes', async () => {
-      const nodes = [
-        createMockNode('node1', 'First Node', 'Content A'),
-        createMockNode('node2', 'Second Node', 'Content B'),
-      ]
-      const onStateChange = vi.fn()
-
-      await engine.executeCrossNode('compare these', ['node1', 'node2'], nodes, undefined, onStateChange)
-
-      expect(sendChatMessage).toHaveBeenCalledWith(
-        expect.stringContaining('[First Node]'),
-        undefined
-      )
-      expect(sendChatMessage).toHaveBeenCalledWith(
-        expect.stringContaining('Content A'),
-        undefined
-      )
-    })
-
-    it('should notify progress when getting referenced content', async () => {
-      const nodes = [
-        createMockNode('node1', 'Node 1', 'Content'),
-      ]
-      const onStateChange = vi.fn()
-
-      await engine.executeCrossNode('use this', ['node1'], nodes, undefined, onStateChange)
-
-      expect(onStateChange).toHaveBeenCalledWith({
-        status: 'pending',
-        progress: '获取引用节点内容...',
-      })
-    })
-
-    it('should use specified model', async () => {
-      const nodes = [createMockNode('node1', 'Node', 'content')]
-
-      await engine.executeCrossNode('use', ['node1'], nodes, 'gpt-4')
-
-      expect(sendChatMessage).toHaveBeenCalledWith(expect.any(String), 'gpt-4')
     })
   })
 })

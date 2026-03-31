@@ -104,6 +104,7 @@ pub fn run() {
             commands::get_asset_path,
             // Chat
             commands::send_chat_message,
+            commands::send_chat_message_with_tools,
             // Skills
             commands::list_skills,
             commands::read_skill,

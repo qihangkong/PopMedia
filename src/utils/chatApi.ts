@@ -1,5 +1,6 @@
 import { invoke } from '@tauri-apps/api/core'
 import type { LlmConfig } from './tauriApi'
+import type { LlmMessage, LlmResponse, ToolDefinition } from '../types/ai'
 
 export interface ChatMessage {
   role: 'user' | 'assistant' | 'system'
@@ -101,4 +102,70 @@ export async function sendChatRequest(options: SendChatOptions): Promise<string>
     config,
     message: messages[messages.length - 1]?.content || '',
   })
+}
+
+/**
+ * Send a chat message with tools support (for Agentic multi-turn mode)
+ * @param messages Array of message objects with role and content
+ * @param tools Array of tool definitions to expose to the LLM
+ * @param modelName Optional specific model to use
+ * @param canvasName Optional canvas name for logging
+ * @param nodeName Optional node name for logging
+ * @param sessionId Optional session ID for logging
+ */
+export async function sendChatMessageWithTools(
+  messages: LlmMessage[],
+  tools: ToolDefinition[],
+  modelName?: string,
+  canvasName?: string,
+  nodeName?: string,
+  sessionId?: string
+): Promise<LlmResponse> {
+  try {
+    const configs = await getLlmConfigs()
+
+    if (!configs || configs.length === 0) {
+      throw new Error('请先在设置中配置 LLM API')
+    }
+
+    // Find config by model name, or use first config
+    let config: LlmConfig
+    if (modelName) {
+      config = configs.find(c => c.model_name === modelName) || configs[0]
+    } else {
+      config = configs[0]
+    }
+
+    if (!config.api_url || !config.api_key) {
+      throw new Error('LLM API 配置不完整，请检查设置')
+    }
+
+    // Convert LlmMessage[] to the format expected by Rust backend
+    const backendMessages = messages.map(m => ({
+      role: m.role,
+      content: m.content,
+      ...(m.tool_calls && { tool_calls: m.tool_calls }),
+      ...(m.tool_call_id && { tool_call_id: m.tool_call_id }),
+    }))
+
+    const result = await invoke<LlmResponse>('send_chat_message_with_tools', {
+      config,
+      messages: backendMessages,
+      tools: tools.map(t => ({
+        name: t.name,
+        description: t.description,
+        input_schema: t.input_schema,
+      })),
+      canvasName: canvasName || null,
+      nodeName: nodeName || null,
+      sessionId: sessionId || null,
+    })
+
+    return result
+  } catch (err) {
+    if (err instanceof Error) {
+      throw err
+    }
+    throw new Error(`发送消息失败: ${err}`)
+  }
 }

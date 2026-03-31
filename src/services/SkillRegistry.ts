@@ -1,5 +1,4 @@
-import { getSkills, getSkill, loadSkillReference, type SkillInfo, type SkillMeta, type SkillReference } from '../utils/tauriApi'
-import type { Skill } from '../types/skill'
+import { getSkills, getSkill, loadSkillReference, type SkillMeta } from '../utils/tauriApi'
 
 export { type Skill } from '../types/skill'
 

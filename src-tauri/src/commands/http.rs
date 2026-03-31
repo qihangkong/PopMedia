@@ -48,3 +48,19 @@ pub fn extract_content_from_response(response_body: &serde_json::Value) -> Optio
                 })
         })
 }
+
+/// Extract tool_calls from an LLM response body
+/// Returns a vector of tool call objects with name and arguments
+pub fn extract_tool_calls_from_response(response_body: &serde_json::Value) -> Option<Vec<serde_json::Value>> {
+    response_body
+        .get("choices")
+        .and_then(|c| c.as_array())
+        .and_then(|choices| choices.first())
+        .and_then(|choice| {
+            choice
+                .get("message")
+                .and_then(|msg| msg.get("tool_calls"))
+                .and_then(|tc| tc.as_array())
+                .map(|arr| arr.to_vec())
+        })
+}

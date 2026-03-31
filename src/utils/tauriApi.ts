@@ -222,6 +222,7 @@ export interface SkillInfo {
 export interface SkillMeta {
   id: string
   name: string
+  description: string
 }
 
 // Get all skills

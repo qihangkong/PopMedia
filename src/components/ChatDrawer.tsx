@@ -1,7 +1,6 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react'
 import { useReactFlow } from '@xyflow/react'
 import { useChat, type ChatMessage } from '../contexts/ChatContext'
-import { aiExecutionEngine, ChatMode } from '../services/AIExecutionEngine'
 import {
   PlusIcon,
   MoreVerticalIcon,
@@ -18,10 +17,9 @@ import {
 } from '../icons'
 
 export default function ChatDrawer() {
-  const { messages, isOpen, isLoading, error, closeChat, sendMessage, addMessage, clearMessages } = useChat()
+  const { messages, isOpen, isLoading, error, closeChat, sendMessage, clearMessages } = useChat()
   const [inputValue, setInputValue] = useState('')
   const [showNodeList, setShowNodeList] = useState(false)
-  const [aiLoading, setAiLoading] = useState(false)
   const [isThinking, setIsThinking] = useState(false)
   const [isFast, setIsFast] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
@@ -39,57 +37,12 @@ export default function ChatDrawer() {
     }
   }, [isOpen])
 
-  // 解析消息中的 @节点 引用
-  const parseNodeMentions = useCallback((input: string): { cleanInput: string; nodeIds: string[] } => {
-    const nodeIds: string[] = []
-    let lastIndex = 0
-    let cleanParts: string[] = []
-
-    for (const match of input.matchAll(/@(\S+)/g)) {
-      nodeIds.push(match[1])
-      cleanParts.push(input.slice(lastIndex, match.index))
-      lastIndex = match.index! + match[0].length
-    }
-    cleanParts.push(input.slice(lastIndex))
-
-    return {
-      cleanInput: cleanParts.join('').trim(),
-      nodeIds,
-    }
-  }, [])
-
   // 处理发送消息
   const handleSend = async () => {
-    if (!inputValue.trim() || isLoading || aiLoading) return
+    if (!inputValue.trim() || isLoading) return
 
-    const { cleanInput, nodeIds } = parseNodeMentions(inputValue)
-
-    // 如果有节点引用，使用跨节点模式
-    if (nodeIds.length > 0) {
-      setAiLoading(true)
-      try {
-        const result = await aiExecutionEngine.execute({
-          mode: ChatMode.CROSS_NODE,
-          userInput: cleanInput,
-          mentionNodeIds: nodeIds,
-          nodes: getNodes(),
-        })
-
-        // 将结果作为助手消息添加
-        addMessage({
-          role: 'assistant',
-          content: result,
-        })
-      } catch (err) {
-        console.error('Cross-node execution failed:', err)
-      } finally {
-        setAiLoading(false)
-      }
-    } else {
-      // 普通消息
-      await sendMessage(inputValue)
-    }
-
+    // 普通消息
+    await sendMessage(inputValue)
     setInputValue('')
   }
 
@@ -185,7 +138,7 @@ export default function ChatDrawer() {
 
       {/* Messages */}
       <div className="chat-float-messages">
-        {messages.length === 0 && !aiLoading && (
+        {messages.length === 0 && !isLoading && (
           <div className="chat-empty">
             <div className="chat-empty-avatar">
               <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
@@ -270,7 +223,7 @@ export default function ChatDrawer() {
             onKeyDown={handleKeyDown}
             placeholder="输入消息，Enter 发送，@节点ID 引用节点..."
             rows={1}
-            disabled={isLoading || aiLoading}
+            disabled={isLoading || isLoading}
           />
         </div>
         <div className="chat-input-toolbar">
@@ -327,7 +280,7 @@ export default function ChatDrawer() {
             <button
               className="chat-send-btn"
               onClick={handleSend}
-              disabled={!inputValue.trim() || isLoading || aiLoading}
+              disabled={!inputValue.trim() || isLoading || isLoading}
             >
               <SendIcon />
             </button>

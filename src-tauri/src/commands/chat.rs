@@ -1,10 +1,27 @@
 use crate::commands::http::extract_content_from_response;
+use crate::commands::http::extract_tool_calls_from_response;
 use crate::commands::AppState;
 use crate::models::LlmConfig;
 use chrono::Local;
+use serde::{Deserialize, Serialize};
 use std::fs::{self, OpenOptions};
 use std::io::Write;
 use std::path::PathBuf;
+
+/// Tool call from LLM
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ToolCall {
+    pub name: String,
+    pub arguments: serde_json::Value,
+}
+
+/// Response from LLM that may contain tool_calls
+#[derive(Debug, Serialize, Deserialize)]
+pub struct LlmResponse {
+    pub content: Option<String>,
+    pub tool_calls: Option<Vec<ToolCall>>,
+    pub error: Option<String>,
+}
 
 /// Sanitize a string to be safe for use in file names
 fn sanitize_filename(s: &str) -> String {
@@ -17,6 +34,14 @@ fn sanitize_filename(s: &str) -> String {
         .collect()
 }
 
+/// Tool definition for the request
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct ToolDefinition {
+    pub name: String,
+    pub description: String,
+    pub input_schema: serde_json::Value,
+}
+
 /// Send a chat message to the LLM and get a response
 #[tauri::command]
 pub async fn send_chat_message(
@@ -27,6 +52,7 @@ pub async fn send_chat_message(
     node_name: Option<String>,
     session_id: Option<String>,
 ) -> Result<String, String> {
+    // Simple single-turn mode: just return text content
     let http_client = state.http_client.clone();
     log::info!("发送聊天消息到 LLM: {}", config.name);
 
@@ -107,7 +133,6 @@ pub async fn send_chat_message(
         let sanitized_canvas = sanitize_filename(canvas);
         let sanitized_node = sanitize_filename(node);
 
-        // Create a unique file name: {YYYYMMDD}_{HHmmss}_{canvas}_{node}_{sessionId}.log
         let file_time = Local::now().format("%Y%m%d_%H%M%S");
         let log_file = log_dir.join(format!(
             "{}_{}_{}_{}.log",
@@ -144,4 +169,172 @@ pub async fn send_chat_message(
 
     log::error!("响应格式无效, 缺少 content 字段");
     Err("API 响应格式无效".to_string())
+}
+
+/// Send a chat message with tools support (Agentic multi-turn mode)
+#[tauri::command]
+pub async fn send_chat_message_with_tools(
+    config: LlmConfig,
+    messages: Vec<serde_json::Value>,
+    tools: Vec<ToolDefinition>,
+    state: tauri::State<'_, AppState>,
+    canvas_name: Option<String>,
+    node_name: Option<String>,
+    session_id: Option<String>,
+) -> Result<LlmResponse, String> {
+    let http_client = state.http_client.clone();
+    log::info!("发送带工具的聊天消息到 LLM: {}", config.name);
+
+    if config.api_url.is_empty() {
+        log::error!("API URL 为空");
+        return Err("API URL is required".to_string());
+    }
+
+    if config.api_key.is_empty() {
+        log::error!("API Key 为空");
+        return Err("API Key is required".to_string());
+    }
+
+    let api_url = config.api_url.trim_end_matches('/');
+
+    let model_name = if config.model_name.is_empty() {
+        "gpt-3.5-turbo"
+    } else {
+        &config.model_name
+    };
+
+    // Build request body with optional tools
+    let mut request_body = serde_json::json!({
+        "model": model_name,
+        "messages": messages,
+        "max_tokens": 4000,
+        "temperature": 0.7
+    });
+
+    // Add tools if provided
+    if !tools.is_empty() {
+        request_body["tools"] = serde_json::json!(tools);
+    }
+
+    let raw_request = request_body.to_string();
+
+    log::info!("发送请求到 {}/chat/completions", api_url);
+    log::debug!("Request body: {}", raw_request);
+
+    let response = http_client
+        .post(&format!("{}/chat/completions", api_url))
+        .header("Authorization", format!("Bearer {}", config.api_key))
+        .header("Content-Type", "application/json")
+        .json(&request_body)
+        .send()
+        .await
+        .map_err(|e| {
+            log::error!("请求失败: {}", e);
+            format!("请求失败: {}", e)
+        })?;
+
+    let status = response.status();
+    if !status.is_success() {
+        let body = response.text().await.map_err(|e| {
+            log::error!("读取响应体失败: {}", e);
+            format!("读取响应体失败: {}", e)
+        })?;
+        log::error!("API 响应错误, 状态码: {}, body: {}", status, body);
+        return Err(format!("API 响应错误 ({}): {}", status, body));
+    }
+
+    let response_body: serde_json::Value = response
+        .json()
+        .await
+        .map_err(|e| {
+            log::error!("解析响应 JSON 失败: {}", e);
+            format!("解析响应失败: {}", e)
+        })?;
+
+    let raw_response = response_body.to_string();
+
+    log::info!("收到响应: {}", response_body);
+
+    // Log AI dialogue
+    if let (Some(canvas), Some(node), Some(sid)) = (&canvas_name, &node_name, &session_id) {
+        let log_dir = dirs::data_local_dir()
+            .map(|p| p.join("PopMedia").join("logs").join("ai_dialogue"))
+            .unwrap_or_else(|| PathBuf::from("logs").join("ai_dialogue"));
+
+        let _ = fs::create_dir_all(&log_dir);
+
+        let timestamp = Local::now().format("%Y-%m-%d %H:%M:%S");
+        let sanitized_canvas = sanitize_filename(canvas);
+        let sanitized_node = sanitize_filename(node);
+
+        let file_time = Local::now().format("%Y%m%d_%H%M%S");
+        let log_file = log_dir.join(format!(
+            "{}_{}_{}_{}.log",
+            file_time, sanitized_canvas, sanitized_node, sid
+        ));
+
+        // Extract user content from first message for logging
+        let user_content = messages
+            .first()
+            .and_then(|m| m.get("content"))
+            .and_then(|c| c.as_str())
+            .unwrap_or("");
+
+        let entry = format!(
+            "[{}]\n\
+             ========== AI Dialogue (Tool Mode) ==========\n\
+             Canvas: {}\n\
+             Node: {}\n\
+             Session: {}\n\
+             --------------------------------\n\
+             [User Input]\n{}\n\
+             --------------------------------\n\
+             [Tools Provided]\n{}\n\
+             --------------------------------\n\
+             [Raw Request]\n{}\n\
+             --------------------------------\n\
+             [Raw Response]\n{}\n\
+             ========== End ==========\n\n",
+            timestamp,
+            canvas,
+            node,
+            sid,
+            user_content,
+            serde_json::to_string_pretty(&tools).unwrap_or_default(),
+            raw_request,
+            raw_response
+        );
+
+        if let Ok(mut file) = OpenOptions::new().create(true).append(true).open(&log_file) {
+            let _ = file.write_all(entry.as_bytes());
+        }
+    }
+
+    // Extract content and tool_calls
+    let content = extract_content_from_response(&response_body)
+        .filter(|s| !s.is_empty())
+        .map(|s| s.to_string());
+
+    let tool_calls = extract_tool_calls_from_response(&response_body).map(|tc_list| {
+        tc_list
+            .into_iter()
+            .filter_map(|tc| {
+                let name = tc.get("name")?.as_str()?.to_string();
+                let arguments = tc.get("arguments")?.clone();
+                Some(ToolCall { name, arguments })
+            })
+            .collect()
+    });
+
+    log::info!(
+        "成功收到 AI 回复 - content: {}, tool_calls: {:?}",
+        content.is_some(),
+        tool_calls.as_ref().map(|tc: &Vec<ToolCall>| tc.len())
+    );
+
+    Ok(LlmResponse {
+        content,
+        tool_calls,
+        error: None,
+    })
 }

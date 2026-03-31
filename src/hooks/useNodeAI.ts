@@ -17,7 +17,12 @@ export function useNodeAI(nodeId: string) {
   const executionRef = useRef<AbortController | null>(null)
 
   // 执行AI任务
-  const execute = useCallback(async (userInput: string, hiddenNodeIds: Set<string> = new Set(), model?: string) => {
+  const execute = useCallback(async (
+    userInput: string,
+    hiddenNodeIds: Set<string> = new Set(),
+    model?: string,
+    onWriteNode?: (nodeId: string, content: string) => void
+  ) => {
     const node = getNode(nodeId)
     if (!node) return
 
@@ -26,11 +31,10 @@ export function useNodeAI(nodeId: string) {
 
     const nodeData = node.data as unknown as NodeData
     const nodeName = nodeData?.label || '未命名节点'
-    // Generate a unique session ID for this conversation
     const sessionId = Math.random().toString(36).substring(2, 9)
 
     const options: ExecutionOptions = {
-      mode: ChatMode.NODE_EXECUTE,
+      mode: ChatMode.NODE_AGENTIC,
       userInput,
       nodeId,
       nodes: getNodes(),
@@ -41,12 +45,16 @@ export function useNodeAI(nodeId: string) {
       nodeName,
       sessionId,
       onStateChange: setExecutionState,
+      onWriteNode,
     }
 
     try {
+      // Agentic mode: AI may write to multiple nodes via onWriteNode callback
       const result = await aiExecutionEngine.execute(options)
-      // 执行完成后写入节点内容
-      updateContent(result)
+      // If AI returns text content, write it to the current node
+      if (result) {
+        updateContent(result)
+      }
     } catch (error) {
       console.error('AI execution failed:', error)
     }
