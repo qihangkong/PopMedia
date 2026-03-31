@@ -153,8 +153,8 @@ describe('UpstreamContextManager', () => {
 
     it('should handle different node types', () => {
       const nodes: Node[] = [
-        createMockNode('img', 'Image Node', 'image', '', 'node1'),
-        createMockNode('vid', 'Video Node', 'video', '', 'node2'),
+        createMockNode('img', 'Image Node', 'image', ''),
+        createMockNode('vid', 'Video Node', 'video', ''),
       ]
       const edges: Edge[] = [
         createMockEdge('img', 'target'),

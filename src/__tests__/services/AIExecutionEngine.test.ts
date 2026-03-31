@@ -1,7 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import type { Node, Edge } from '@xyflow/react'
 import { AIExecutionEngine, ChatMode } from '../../services/AIExecutionEngine'
-import type { NodeData } from '../../types'
 
 // Mock the chatApi module
 vi.mock('../../utils/chatApi', () => ({
@@ -25,18 +24,8 @@ function createMockNode(id: string, label: string, content = 'Test content'): No
   return {
     id,
     type: 'default',
-    data: { label, type: 'text', content } as NodeData,
+    data: { label, type: 'text', content } as Record<string, unknown>,
     position: { x: 0, y: 0 },
-  }
-}
-
-// Helper to create mock edges
-function createMockEdge(source: string, target: string): Edge {
-  return {
-    id: `${source}-${target}`,
-    source,
-    target,
-    type: 'default',
   }
 }
 

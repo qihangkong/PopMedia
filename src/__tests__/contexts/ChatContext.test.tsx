@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent, act, waitFor } from '@testing-library/react'
-import { ChatProvider, useChat, type ChatMessage } from '../../contexts/ChatContext'
+import { ChatProvider, useChat } from '../../contexts/ChatContext'
 
 // Mock the chatApi module
 vi.mock('../../utils/chatApi', () => ({
