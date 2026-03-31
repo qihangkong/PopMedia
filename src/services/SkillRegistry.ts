@@ -140,6 +140,16 @@ class SkillRegistry {
     this.skillReferences.clear()
     await this.initialize()
   }
+
+  /**
+   * 重置内部状态（用于测试）
+   */
+  _reset(): void {
+    this.initialized = false
+    this.skillMetas.clear()
+    this.skillBodies.clear()
+    this.skillReferences.clear()
+  }
 }
 
 // Singleton instance

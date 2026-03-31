@@ -128,5 +128,82 @@ describe('IntentClassifier', () => {
       const result = IntentClassifier.classify(input)
       expect(result.customPrompt).toBe(input)
     })
+
+    it('should handle 编写 keyword for generate', () => {
+      const result = IntentClassifier.classify('编写一个脚本')
+      expect(result.action).toBe('generate')
+    })
+
+    it('should handle 制作 keyword for generate', () => {
+      const result = IntentClassifier.classify('制作视频')
+      expect(result.action).toBe('generate')
+    })
+
+    it('should handle 概括 keyword for summarize', () => {
+      const result = IntentClassifier.classify('概括本文要点')
+      expect(result.action).toBe('summarize')
+    })
+
+    it('should handle 提炼 keyword for summarize', () => {
+      const result = IntentClassifier.classify('提炼核心观点')
+      expect(result.action).toBe('summarize')
+    })
+
+    it('should handle 拆解 keyword for analyze', () => {
+      const result = IntentClassifier.classify('拆解问题结构')
+      expect(result.action).toBe('analyze')
+    })
+
+    it('should handle 改写 keyword for edit', () => {
+      const result = IntentClassifier.classify('改写这段话')
+      expect(result.action).toBe('edit')
+    })
+
+    it('should handle 评论 keyword for review', () => {
+      const result = IntentClassifier.classify('评论这部电影')
+      expect(result.action).toBe('review')
+    })
+
+    it('should extract target for 脚本', () => {
+      const result = IntentClassifier.classify('生成一个脚本')
+      expect(result.target).toBe('脚本')
+    })
+
+    it('should extract target for 摘要', () => {
+      const result = IntentClassifier.classify('总结一下摘要')
+      expect(result.target).toBe('摘要')
+    })
+
+    it('should not extract target when no known target present', () => {
+      const result = IntentClassifier.classify('帮我处理这个')
+      expect(result.target).toBeUndefined()
+    })
+
+    it('should return needsUpstream as true for custom intent', () => {
+      const result = IntentClassifier.classify('随便聊聊')
+      expect(result.needsUpstream).toBe(true)
+    })
+
+    it('should handle undefined nodeRole parameter', () => {
+      const result = IntentClassifier.classify('生成内容', undefined)
+      expect(result.action).toBe('generate')
+    })
+
+    it('should use role classification when nodeRole is provided', () => {
+      // When nodeRole is provided, role-based classification wins with 0.95 confidence
+      const result = IntentClassifier.classify('随便输入', 'summarizer')
+      expect(result.action).toBe('summarize')
+      expect(result.confidence).toBe(0.95)
+    })
+
+    it('should have confidence 0.9 for pattern match', () => {
+      const result = IntentClassifier.classify('翻译成中文')
+      expect(result.confidence).toBe(0.9)
+    })
+
+    it('should have confidence 0.95 for role-based classification', () => {
+      const result = IntentClassifier.classify('随便输入', 'editor')
+      expect(result.confidence).toBe(0.95)
+    })
   })
 })

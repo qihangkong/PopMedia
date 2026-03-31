@@ -1,23 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import type { Node, Edge } from '@xyflow/react'
 import { AIExecutionEngine, ChatMode } from '../../services/AIExecutionEngine'
-
-// Mock the chatApi module
-vi.mock('../../utils/chatApi', () => ({
-  sendChatMessage: vi.fn().mockImplementation((_content: string, _model?: string) => {
-    return Promise.resolve('mock AI response')
-  }),
-  sendChatMessageWithTools: vi.fn().mockImplementation((_messages, _tools, _model?, _canvas?, _node?, _session?) => {
-    // Default mock returns a response without tool_calls (final response)
-    return Promise.resolve({
-      content: 'mock AI response',
-      tool_calls: undefined,
-      error: undefined,
-    })
-  }),
-}))
-
-import { sendChatMessage, sendChatMessageWithTools } from '../../utils/chatApi'
+import type { LlmMessage, ToolDefinition } from '../../types/ai'
 
 // Helper to create mock nodes
 function createMockNode(id: string, label: string, content = 'Test content'): Node {
@@ -29,17 +13,30 @@ function createMockNode(id: string, label: string, content = 'Test content'): No
   }
 }
 
+// Mock function type for dependency injection
+type MockSendChatMessageFn = ReturnType<typeof vi.fn>
+
 describe('AIExecutionEngine', () => {
+  let mockSendChatMessage: MockSendChatMessageFn
   let engine: AIExecutionEngine
 
+  const createMockSendChatMessage = (): typeof vi.fn => {
+    return vi.fn().mockImplementation((_messages: LlmMessage[], _tools: ToolDefinition[], _model?: string, _canvas?: string, _node?: string, _session?: string) => {
+      return Promise.resolve({
+        content: 'mock AI response',
+        tool_calls: undefined,
+        error: undefined,
+      })
+    })
+  }
+
   beforeEach(() => {
-    engine = new AIExecutionEngine()
-    vi.clearAllMocks()
+    mockSendChatMessage = createMockSendChatMessage()
+    engine = new AIExecutionEngine(mockSendChatMessage)
   })
 
   describe('execute', () => {
     it('should route to global chat for GLOBAL_CHAT mode', async () => {
-      // GLOBAL_CHAT throws error as it's not yet implemented in agentic style
       await expect(engine.execute({
         mode: ChatMode.GLOBAL_CHAT,
         userInput: 'Hello AI',
@@ -62,8 +59,7 @@ describe('AIExecutionEngine', () => {
       })
 
       expect(result).toBe('mock AI response')
-      // Should use sendChatMessageWithTools for agentic mode
-      expect(sendChatMessageWithTools).toHaveBeenCalled()
+      expect(mockSendChatMessage).toHaveBeenCalled()
     })
 
     it('should throw error for unknown mode', async () => {
@@ -138,7 +134,6 @@ describe('AIExecutionEngine', () => {
         onStateChange,
       })
 
-      // First call should be pending with AI分析中
       expect(onStateChange).toHaveBeenCalledWith({ status: 'pending', progress: 'AI分析中...' })
     })
 
@@ -162,7 +157,8 @@ describe('AIExecutionEngine', () => {
     })
 
     it('should call onStateChange with error on failure', async () => {
-      vi.mocked(sendChatMessageWithTools).mockRejectedValueOnce(new Error('API error'))
+      mockSendChatMessage = vi.fn().mockRejectedValueOnce(new Error('API error'))
+      engine = new AIExecutionEngine(mockSendChatMessage)
 
       const nodes = [createMockNode('node1', 'Test', 'content')]
       const edges: Edge[] = []
@@ -182,7 +178,7 @@ describe('AIExecutionEngine', () => {
       expect(lastCall.error).toBe('API error')
     })
 
-    it('should use sendChatMessageWithTools for agentic mode', async () => {
+    it('should use injected sendChatMessage for agentic mode', async () => {
       const nodes = [createMockNode('node1', 'Test', 'content')]
       const edges: Edge[] = []
 
@@ -194,23 +190,24 @@ describe('AIExecutionEngine', () => {
         edges,
       })
 
-      expect(sendChatMessageWithTools).toHaveBeenCalled()
-      expect(sendChatMessage).not.toHaveBeenCalled()
+      expect(mockSendChatMessage).toHaveBeenCalled()
     })
 
     it('should handle tool_calls in agentic loop', async () => {
-      // Mock that LLM returns a tool_call
-      vi.mocked(sendChatMessageWithTools).mockResolvedValueOnce({
-        content: '',
-        tool_calls: [
-          { name: 'read_node', arguments: { nodeId: 'node1' } }
-        ],
-        error: undefined,
-      }).mockResolvedValueOnce({
-        content: 'final response after tool',
-        tool_calls: undefined,
-        error: undefined,
-      })
+      mockSendChatMessage = vi.fn()
+        .mockResolvedValueOnce({
+          content: '',
+          tool_calls: [
+            { name: 'read_node', arguments: { nodeId: 'node1' } }
+          ],
+          error: undefined,
+        })
+        .mockResolvedValueOnce({
+          content: 'final response after tool',
+          tool_calls: undefined,
+          error: undefined,
+        })
+      engine = new AIExecutionEngine(mockSendChatMessage)
 
       const nodes = [createMockNode('node1', 'Test', 'content')]
       const edges: Edge[] = []
@@ -224,8 +221,12 @@ describe('AIExecutionEngine', () => {
       })
 
       expect(result).toBe('final response after tool')
-      // Should have called twice - once for tool call, once for final response
-      expect(sendChatMessageWithTools).toHaveBeenCalledTimes(2)
+      expect(mockSendChatMessage).toHaveBeenCalledTimes(2)
+    })
+
+    it('should use default sendChatMessage when not injected', () => {
+      const defaultEngine = new AIExecutionEngine()
+      expect(defaultEngine).toBeInstanceOf(AIExecutionEngine)
     })
   })
 

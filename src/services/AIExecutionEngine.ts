@@ -1,10 +1,13 @@
 import type { Node, Edge } from '@xyflow/react'
-import { sendChatMessageWithTools } from '../utils/chatApi'
+import { sendChatMessageWithTools as defaultSendChatMessageWithTools } from '../utils/chatApi'
 import { UpstreamContextManager } from './UpstreamContextManager'
 import { skillRegistry } from './SkillRegistry'
 import { toolRegistry } from './ToolRegistry'
 import type { ExecutionState, LlmMessage, ToolResult } from '../types/ai'
 import type { NodeData } from '../types'
+
+// Type for the chat API function (allows dependency injection)
+type SendChatMessageFn = typeof defaultSendChatMessageWithTools
 
 // 角色对应的System Prompt
 const ROLE_PROMPTS: Record<string, string> = {
@@ -81,6 +84,12 @@ export interface ExecutionOptions {
 }
 
 export class AIExecutionEngine {
+  private sendChatMessageFn: SendChatMessageFn
+
+  constructor(sendChatMessageFn?: SendChatMessageFn) {
+    this.sendChatMessageFn = sendChatMessageFn || defaultSendChatMessageWithTools
+  }
+
   /**
    * 执行AI任务
    */
@@ -157,7 +166,7 @@ export class AIExecutionEngine {
         onStateChange?.({ status: 'generating', progress: `AI思考中... (${i + 1}/${maxIterations})` })
 
         // Send to LLM with tools
-        const response = await sendChatMessageWithTools(
+        const response = await this.sendChatMessageFn(
           messages,
           tools,
           model,
