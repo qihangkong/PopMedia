@@ -129,6 +129,7 @@ describe('chatApi', () => {
       const config = {
         id: '1',
         name: 'Test',
+        provider_type: 'openai' as const,
         api_url: '',
         api_key: 'key',
         model_name: 'gpt-4',
@@ -143,6 +144,7 @@ describe('chatApi', () => {
       const config = {
         id: '1',
         name: 'Test',
+        provider_type: 'openai' as const,
         api_url: 'https://api.example.com',
         api_key: '',
         model_name: 'gpt-4',
@@ -159,6 +161,7 @@ describe('chatApi', () => {
       const config = {
         id: '1',
         name: 'Test',
+        provider_type: 'openai' as const,
         api_url: 'https://api.example.com',
         api_key: 'key',
         model_name: 'gpt-4',
@@ -182,6 +185,7 @@ describe('chatApi', () => {
       const config = {
         id: '1',
         name: 'Test',
+        provider_type: 'openai' as const,
         api_url: 'https://api.example.com',
         api_key: 'key',
         model_name: 'gpt-4',
@@ -200,7 +204,7 @@ describe('chatApi', () => {
       // First call caches the result
       vi.mocked(invoke)
         .mockResolvedValueOnce([
-          { id: '1', name: 'Test', api_url: 'url', api_key: 'key', model_name: 'gpt-4' },
+          { id: '1', name: 'Test', provider_type: 'openai', api_url: 'url', api_key: 'key', model_name: 'gpt-4' },
         ])
         .mockResolvedValueOnce('response1')
 
@@ -212,7 +216,7 @@ describe('chatApi', () => {
       // Next call should fetch again
       vi.mocked(invoke)
         .mockResolvedValueOnce([
-          { id: '1', name: 'Test', api_url: 'url', api_key: 'key', model_name: 'gpt-4' },
+          { id: '1', name: 'Test', provider_type: 'openai', api_url: 'url', api_key: 'key', model_name: 'gpt-4' },
         ])
         .mockResolvedValueOnce('response2')
 

@@ -3,6 +3,7 @@ import { invoke, isTauri, convertFileSrc } from '@tauri-apps/api/core'
 // Import and re-export types from centralized location
 import type {
   LlmConfig,
+  LlmProviderType,
   ComfyuiConfig,
   ProjectInfo,
   SaveResult,
@@ -12,10 +13,12 @@ import type {
   SkillInfo,
   SkillMeta,
   SkillReference,
+  TestConnectionResult,
 } from '../types/settings'
 
 export type {
   LlmConfig,
+  LlmProviderType,
   ComfyuiConfig,
   ProjectInfo,
   SaveResult,
@@ -25,7 +28,11 @@ export type {
   SkillInfo,
   SkillMeta,
   SkillReference,
+  TestConnectionResult,
 }
+
+// Re-export provider info
+export { LLM_PROVIDERS } from '../types/settings'
 
 // Re-export isTauri for convenience
 export { isTauri }
@@ -88,8 +95,8 @@ export async function deleteComfyuiConfig(id: string): Promise<string> {
 }
 
 // Test LLM connection
-export async function testLlmConnection(config: LlmConfig): Promise<string> {
-  return await invoke<string>('test_llm_connection', { config })
+export async function testLlmConnection(config: LlmConfig): Promise<TestConnectionResult> {
+  return await invoke<TestConnectionResult>('test_llm_connection', { config })
 }
 
 // Test ComfyUI connection

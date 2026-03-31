@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import HeaderBar from '../components/HeaderBar'
 import TestLogModal from '../components/TestLogModal'
+import CustomSelect from '../components/CustomSelect'
 import {
   LlmConfig,
   ComfyuiConfig,
@@ -18,6 +19,7 @@ import {
   deleteSkill,
   readSkillRaw,
   type SkillInfo,
+  LLM_PROVIDERS,
 } from '../utils/tauriApi'
 import { invalidateLlmConfigCache } from '../utils/chatApi'
 import { skillRegistry } from '../services/SkillRegistry'
@@ -32,6 +34,7 @@ import {
   ServerIcon,
   SkillIcon,
 } from '../icons'
+import type { LlmProviderType } from '../types/settings'
 
 type ConnectionStatus = 'untested' | 'testing' | 'success' | 'failed'
 
@@ -117,7 +120,8 @@ export default function Settings() {
     const newConfig: LlmConfigWithStatus = {
       id: crypto.randomUUID(),
       name: '新的大语言模型',
-      api_url: '',
+      provider_type: 'volcengine',
+      api_url: 'https://ark.cn-beijing.volces.com/api/coding/v1',
       api_key: '',
       model_name: '',
       connectionStatus: 'untested',
@@ -179,11 +183,14 @@ export default function Settings() {
     const config = llmConfigs.find(c => c.id === id)
     if (!config) return
 
+    console.log('handleUpdateLLM:', { id, field, value, config })
     const updatedConfig = { ...config, [field]: value, connectionStatus: 'untested' as ConnectionStatus }
+    console.log('updatedConfig:', updatedConfig)
     setLlmConfigs(prev => prev.map(c => c.id === id ? updatedConfig : c))
 
     try {
-      await saveLlmConfig(updatedConfig)
+      const result = await saveLlmConfig(updatedConfig)
+      console.log('save result:', result)
       invalidateLlmConfigCache()
     } catch {
       notifyError('保存 LLM 配置失败')
@@ -225,11 +232,11 @@ export default function Settings() {
         const result = await testLlmConnection(config)
         setTestLogModal(prev => ({
           ...prev,
-          logs: [...prev.logs, `连接成功!`, `响应: ${result}`],
-          status: 'success'
+          logs: result.logs,
+          status: result.success ? 'success' : 'failed'
         }))
         setLlmConfigs(prev => prev.map(c =>
-          c.id === id ? { ...c, connectionStatus: 'success' as ConnectionStatus, connectionMessage: result } : c
+          c.id === id ? { ...c, connectionStatus: result.success ? 'success' as ConnectionStatus : 'failed' as ConnectionStatus, connectionMessage: result.message } : c
         ))
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : String(error)
@@ -420,19 +427,68 @@ description: ${name}
                         <div className="config-block">
                           <div className="config-fields">
                             <div className="field-group">
-                              <label>API URL</label>
+                              <label>厂商</label>
                               <div className="input-wrapper">
                                 <GlobeIcon />
-                                <input
-                                  type="text"
-                                  className="config-input"
-                                  placeholder="https://api.example.com/v1"
-                                  value={config.api_url}
-                                  onChange={(e) => handleUpdateLLM(config.id, 'api_url', e.target.value)}
+                                <CustomSelect
+                                  value={config.provider_type}
+                                  options={LLM_PROVIDERS.map(p => ({
+                                    value: p.type,
+                                    label: p.name,
+                                    description: p.description,
+                                    isCoding: p.isCoding,
+                                  }))}
+                                  onChange={async (value) => {
+                                    const provider = LLM_PROVIDERS.find(p => p.type === value)
+                                    if (provider) {
+                                      const defaultUrl = provider.type === 'custom' ? '' : provider.type.startsWith('volcengine')
+                                        ? 'https://ark.cn-beijing.volces.com/api/coding/v1'
+                                        : provider.type.startsWith('alibaba')
+                                        ? 'https://dashscope.aliyuncs.com/api/v1'
+                                        : provider.type === 'baidu'
+                                        ? 'https://qianfan.baidubce.com/v2'
+                                        : provider.type === 'zhipu'
+                                        ? 'https://open.bigmodel.cn/api/paas/v4'
+                                        : provider.type === 'minimax'
+                                        ? 'https://api.minimax.chat/v1'
+                                        : provider.type === 'openai'
+                                        ? 'https://api.openai.com/v1'
+                                        : ''
+                                      const updatedConfig = {
+                                        ...config,
+                                        provider_type: value as LlmProviderType,
+                                        api_url: defaultUrl,
+                                        connectionStatus: 'untested' as ConnectionStatus,
+                                      }
+                                      setLlmConfigs(prev => prev.map(c => c.id === config.id ? updatedConfig : c))
+                                      try {
+                                        await saveLlmConfig(updatedConfig)
+                                        invalidateLlmConfigCache()
+                                      } catch {
+                                        notifyError('保存 LLM 配置失败')
+                                      }
+                                    }
+                                  }}
                                   disabled={editingId !== config.id}
                                 />
                               </div>
                             </div>
+                            {config.provider_type === 'custom' && (
+                              <div className="field-group">
+                                <label>API URL</label>
+                                <div className="input-wrapper">
+                                  <GlobeIcon />
+                                  <input
+                                    type="text"
+                                    className="config-input"
+                                    placeholder="https://api.example.com/v1"
+                                    value={config.api_url}
+                                    onChange={(e) => handleUpdateLLM(config.id, 'api_url', e.target.value)}
+                                    disabled={editingId !== config.id}
+                                  />
+                                </div>
+                              </div>
+                            )}
                             <div className="field-group">
                               <label>API Key</label>
                               <div className="input-wrapper">
@@ -454,7 +510,7 @@ description: ${name}
                                 <input
                                   type="text"
                                   className="config-input"
-                                  placeholder="gpt-4o"
+                                  placeholder={config.provider_type.includes('coding') ? '如: kimi-coder-8k' : '如: kimi-2.5-flash'}
                                   value={config.model_name}
                                   onChange={(e) => handleUpdateLLM(config.id, 'model_name', e.target.value)}
                                   disabled={editingId !== config.id}
