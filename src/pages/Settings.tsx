@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import HeaderBar from '../components/HeaderBar'
+import TestLogModal from '../components/TestLogModal'
 import {
   LlmConfig,
   ComfyuiConfig,
@@ -58,6 +59,19 @@ export default function Settings() {
   const [skills, setSkills] = useState<SkillInfo[]>([])
   const [selectedSkillId, setSelectedSkillId] = useState<string | null>(null)
   const [skillRawContents, setSkillRawContents] = useState<Map<string, string>>(new Map())
+
+  // Test log modal state
+  const [testLogModal, setTestLogModal] = useState<{
+    isOpen: boolean
+    title: string
+    logs: string[]
+    status: 'pending' | 'success' | 'failed'
+  }>({
+    isOpen: false,
+    title: '',
+    logs: [],
+    status: 'pending'
+  })
 
   // Load configs from database on mount
   useEffect(() => {
@@ -195,17 +209,35 @@ export default function Settings() {
       const config = llmConfigs.find(c => c.id === id)
       if (!config) return
 
+      // Open modal with initial log
+      setTestLogModal({
+        isOpen: true,
+        title: `测试 ${config.name}`,
+        logs: [`开始测试连接...`, `配置: ${config.api_url}`],
+        status: 'pending'
+      })
+
       setLlmConfigs(prev => prev.map(c =>
         c.id === id ? { ...c, connectionStatus: 'testing' as ConnectionStatus, connectionMessage: undefined } : c
       ))
 
       try {
         const result = await testLlmConnection(config)
+        setTestLogModal(prev => ({
+          ...prev,
+          logs: [...prev.logs, `连接成功!`, `响应: ${result}`],
+          status: 'success'
+        }))
         setLlmConfigs(prev => prev.map(c =>
           c.id === id ? { ...c, connectionStatus: 'success' as ConnectionStatus, connectionMessage: result } : c
         ))
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : String(error)
+        setTestLogModal(prev => ({
+          ...prev,
+          logs: [...prev.logs, `连接失败!`, `错误: ${errorMessage}`],
+          status: 'failed'
+        }))
         setLlmConfigs(prev => prev.map(c =>
           c.id === id ? { ...c, connectionStatus: 'failed' as ConnectionStatus, connectionMessage: errorMessage } : c
         ))
@@ -214,17 +246,34 @@ export default function Settings() {
       const config = comfyuiConfigs.find(c => c.id === id)
       if (!config) return
 
+      setTestLogModal({
+        isOpen: true,
+        title: `测试 ${config.name}`,
+        logs: [`开始测试连接...`, `配置: ${config.host}:${config.port}`],
+        status: 'pending'
+      })
+
       setComfyuiConfigs(prev => prev.map(c =>
         c.id === id ? { ...c, connectionStatus: 'testing' as ConnectionStatus, connectionMessage: undefined } : c
       ))
 
       try {
         const result = await testComfyuiConnection(config)
+        setTestLogModal(prev => ({
+          ...prev,
+          logs: [...prev.logs, `连接成功!`, `响应: ${result}`],
+          status: 'success'
+        }))
         setComfyuiConfigs(prev => prev.map(c =>
           c.id === id ? { ...c, connectionStatus: 'success' as ConnectionStatus, connectionMessage: result } : c
         ))
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : String(error)
+        setTestLogModal(prev => ({
+          ...prev,
+          logs: [...prev.logs, `连接失败!`, `错误: ${errorMessage}`],
+          status: 'failed'
+        }))
         setComfyuiConfigs(prev => prev.map(c =>
           c.id === id ? { ...c, connectionStatus: 'failed' as ConnectionStatus, connectionMessage: errorMessage } : c
         ))
@@ -595,6 +644,15 @@ description: ${name}
           )}
         </div>
       </div>
+
+      {/* Test Log Modal */}
+      <TestLogModal
+        isOpen={testLogModal.isOpen}
+        onClose={() => setTestLogModal(prev => ({ ...prev, isOpen: false }))}
+        title={testLogModal.title}
+        logs={testLogModal.logs}
+        status={testLogModal.status}
+      />
     </div>
   )
 }
