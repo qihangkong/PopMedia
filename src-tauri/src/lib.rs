@@ -8,6 +8,9 @@ mod tests;
 #[cfg(test)]
 mod db_tests;
 
+#[cfg(test)]
+mod commands_tests;
+
 use commands::http::create_http_client;
 use commands::skills::init_default_skills;
 use commands::AppState;
