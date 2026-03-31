@@ -1,15 +1,30 @@
 import { invoke, isTauri, convertFileSrc } from '@tauri-apps/api/core'
 
-export interface ProjectInfo {
-  name: string
-  version: string
-  app_data_dir: string
-}
+// Import and re-export types from centralized location
+import type {
+  LlmConfig,
+  ComfyuiConfig,
+  ProjectInfo,
+  SaveResult,
+  ProjectInfoData,
+  CanvasInfo,
+  CanvasData,
+  SkillInfo,
+  SkillMeta,
+  SkillReference,
+} from '../types/settings'
 
-export interface SaveResult {
-  success: boolean
-  path: string
-  message: string
+export type {
+  LlmConfig,
+  ComfyuiConfig,
+  ProjectInfo,
+  SaveResult,
+  ProjectInfoData,
+  CanvasInfo,
+  CanvasData,
+  SkillInfo,
+  SkillMeta,
+  SkillReference,
 }
 
 // Re-export isTauri for convenience
@@ -41,21 +56,6 @@ export async function deleteProject(name: string): Promise<string> {
 }
 
 // ==================== Settings API ====================
-
-export interface LlmConfig {
-  id: string
-  name: string
-  api_url: string
-  api_key: string
-  model_name: string
-}
-
-export interface ComfyuiConfig {
-  id: string
-  name: string
-  host: string
-  port: string
-}
 
 // Get all LLM configs from database
 export async function getLlmConfigs(): Promise<LlmConfig[]> {
@@ -99,14 +99,6 @@ export async function testComfyuiConnection(config: ComfyuiConfig): Promise<stri
 
 // ==================== Projects API ====================
 
-export interface ProjectInfoData {
-  id: string
-  name: string
-  thumbnail: string | null
-  created_at: string
-  updated_at: string
-}
-
 // Get all projects
 export async function getProjects(): Promise<ProjectInfoData[]> {
   return await invoke<ProjectInfoData[]>('get_projects')
@@ -123,16 +115,6 @@ export async function deleteProjectById(id: string): Promise<string> {
 }
 
 // ==================== Canvases API ====================
-
-export interface CanvasInfo {
-  id: string
-  name: string
-  thumbnail: string | null
-  preview: string | null  // JSON array of recent media paths for preview
-  project_id: string | null
-  created_at: string
-  updated_at: string
-}
 
 // Get all canvases (recent)
 export async function getAllCanvases(): Promise<CanvasInfo[]> {
@@ -165,12 +147,6 @@ export async function updateCanvasPreview(id: string, preview: string): Promise<
 }
 
 // ==================== Canvas Data Commands ====================
-
-export interface CanvasData {
-  nodes: unknown[]
-  edges: unknown[]
-  viewport?: unknown
-}
 
 // Save canvas data (nodes, edges, viewport)
 export async function saveCanvasData(id: string, data: CanvasData): Promise<string> {
@@ -211,20 +187,6 @@ export async function getFileUrl(relativePath: string): Promise<string> {
 
 // ==================== Skills API ====================
 
-export interface SkillInfo {
-  id: string
-  name: string
-  description: string
-  body: string
-  needs_upstream: boolean
-}
-
-export interface SkillMeta {
-  id: string
-  name: string
-  description: string
-}
-
 // Get all skills
 export async function getSkills(): Promise<SkillMeta[]> {
   return await invoke<SkillMeta[]>('list_skills')
@@ -246,11 +208,6 @@ export async function deleteSkill(id: string): Promise<void> {
 }
 
 // Load skill references (Level 3: references/ or scripts/)
-export interface SkillReference {
-  name: string
-  content: string
-}
-
 export async function loadSkillReference(id: string, level: 'references' | 'scripts'): Promise<SkillReference[]> {
   return await invoke<SkillReference[]>('load_skill_reference', { id, level })
 }

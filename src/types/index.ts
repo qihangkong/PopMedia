@@ -55,3 +55,17 @@ export function getNodeMediaUrl(data: NodeData): string | undefined {
 
 // Re-export remaining AI types
 export type { ExecutionState, ChatMessage, CachedContext } from './ai'
+
+// Re-export settings/API types
+export type {
+  LlmConfig,
+  ComfyuiConfig,
+  ProjectInfo,
+  SaveResult,
+  ProjectInfoData,
+  CanvasInfo,
+  CanvasData,
+  SkillInfo,
+  SkillMeta,
+  SkillReference,
+} from './settings'

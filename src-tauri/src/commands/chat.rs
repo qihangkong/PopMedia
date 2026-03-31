@@ -34,6 +34,87 @@ fn sanitize_filename(s: &str) -> String {
         .collect()
 }
 
+/// Log AI dialogue to a per-session file
+fn log_ai_dialogue(
+    canvas: &str,
+    node: &str,
+    sid: &str,
+    user_input: &str,
+    raw_request: &str,
+    raw_response: &str,
+    mode_label: &str,
+    extra_content: Option<(&str, &str)>, // Optional (label, content) for additional sections
+) {
+    let log_dir = dirs::data_local_dir()
+        .map(|p| p.join("PopMedia").join("logs").join("ai_dialogue"))
+        .unwrap_or_else(|| PathBuf::from("logs").join("ai_dialogue"));
+
+    if let Err(e) = fs::create_dir_all(&log_dir) {
+        log::warn!("Failed to create log directory: {}", e);
+        return;
+    }
+
+    let timestamp = Local::now().format("%Y-%m-%d %H:%M:%S");
+    let sanitized_canvas = sanitize_filename(canvas);
+    let sanitized_node = sanitize_filename(node);
+    let file_time = Local::now().format("%Y%m%d_%H%M%S");
+
+    let log_file = log_dir.join(format!(
+        "{}_{}_{}_{}.log",
+        file_time, sanitized_canvas, sanitized_node, sid
+    ));
+
+    let mut entry = format!(
+        "[{}]\n\
+         ========== AI Dialogue {} ==========\n\
+         Canvas: {}\n\
+         Node: {}\n\
+         Session: {}\n\
+         --------------------------------\n\
+         [User Input]\n{}\n\
+         --------------------------------\n\
+         [Raw Request]\n{}\n\
+         --------------------------------\n\
+         [Raw Response]\n{}",
+        timestamp,
+        mode_label,
+        canvas,
+        node,
+        sid,
+        user_input,
+        raw_request,
+        raw_response
+    );
+
+    if let Some((label, content)) = extra_content {
+        entry.push_str(&format!("\n         --------------------------------\n\
+         [{}]\n{}", label, content));
+    }
+
+    entry.push_str("\n         ========== End ==========\n\n");
+
+    if let Ok(mut file) = OpenOptions::new().create(true).append(true).open(&log_file) {
+        if let Err(e) = file.write_all(entry.as_bytes()) {
+            log::warn!("Failed to write AI dialogue log: {}", e);
+        }
+    }
+}
+
+/// Validate LLM config and return the sanitized API URL
+fn validate_llm_config(config: &LlmConfig) -> Result<String, String> {
+    if config.api_url.is_empty() {
+        log::error!("API URL 为空");
+        return Err("API URL is required".to_string());
+    }
+
+    if config.api_key.is_empty() {
+        log::error!("API Key 为空");
+        return Err("API Key is required".to_string());
+    }
+
+    Ok(config.api_url.trim_end_matches('/').to_string())
+}
+
 /// Tool definition for the request
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct ToolDefinition {
@@ -56,17 +137,11 @@ pub async fn send_chat_message(
     let http_client = state.http_client.clone();
     log::info!("发送聊天消息到 LLM: {}", config.name);
 
-    if config.api_url.is_empty() {
-        log::error!("API URL 为空");
-        return Err("API URL is required".to_string());
-    }
-
-    if config.api_key.is_empty() {
-        log::error!("API Key 为空");
-        return Err("API Key is required".to_string());
-    }
-
-    let api_url = config.api_url.trim_end_matches('/');
+    // Validate config and get sanitized API URL
+    let api_url = match validate_llm_config(&config) {
+        Ok(url) => url,
+        Err(e) => return Err(e),
+    };
 
     let model_name = if config.model_name.is_empty() {
         "gpt-3.5-turbo"
@@ -121,43 +196,18 @@ pub async fn send_chat_message(
 
     log::info!("收到响应: {}", response_body);
 
-    // Log AI dialogue to a per-session file if canvas_name, node_name, and session_id are provided
+    // Log AI dialogue to a per-session file
     if let (Some(canvas), Some(node), Some(sid)) = (&canvas_name, &node_name, &session_id) {
-        let log_dir = dirs::data_local_dir()
-            .map(|p| p.join("PopMedia").join("logs").join("ai_dialogue"))
-            .unwrap_or_else(|| PathBuf::from("logs").join("ai_dialogue"));
-
-        let _ = fs::create_dir_all(&log_dir);
-
-        let timestamp = Local::now().format("%Y-%m-%d %H:%M:%S");
-        let sanitized_canvas = sanitize_filename(canvas);
-        let sanitized_node = sanitize_filename(node);
-
-        let file_time = Local::now().format("%Y%m%d_%H%M%S");
-        let log_file = log_dir.join(format!(
-            "{}_{}_{}_{}.log",
-            file_time, sanitized_canvas, sanitized_node, sid
-        ));
-
-        let entry = format!(
-            "[{}]\n\
-             ========== AI Dialogue ==========\n\
-             Canvas: {}\n\
-             Node: {}\n\
-             Session: {}\n\
-             --------------------------------\n\
-             [User Input]\n{}\n\
-             --------------------------------\n\
-             [Raw Request]\n{}\n\
-             --------------------------------\n\
-             [Raw Response]\n{}\n\
-             ========== End ==========\n\n",
-            timestamp, canvas, node, sid, message, raw_request, raw_response
+        log_ai_dialogue(
+            canvas,
+            node,
+            sid,
+            &message,
+            &raw_request,
+            &raw_response,
+            "",
+            None,
         );
-
-        if let Ok(mut file) = OpenOptions::new().create(true).append(true).open(&log_file) {
-            let _ = file.write_all(entry.as_bytes());
-        }
     }
 
     if let Some(text) = extract_content_from_response(&response_body) {
@@ -185,17 +235,11 @@ pub async fn send_chat_message_with_tools(
     let http_client = state.http_client.clone();
     log::info!("发送带工具的聊天消息到 LLM: {}", config.name);
 
-    if config.api_url.is_empty() {
-        log::error!("API URL 为空");
-        return Err("API URL is required".to_string());
-    }
-
-    if config.api_key.is_empty() {
-        log::error!("API Key 为空");
-        return Err("API Key is required".to_string());
-    }
-
-    let api_url = config.api_url.trim_end_matches('/');
+    // Validate config and get sanitized API URL
+    let api_url = match validate_llm_config(&config) {
+        Ok(url) => url,
+        Err(e) => return Err(e),
+    };
 
     let model_name = if config.model_name.is_empty() {
         "gpt-3.5-turbo"
@@ -257,22 +301,6 @@ pub async fn send_chat_message_with_tools(
 
     // Log AI dialogue
     if let (Some(canvas), Some(node), Some(sid)) = (&canvas_name, &node_name, &session_id) {
-        let log_dir = dirs::data_local_dir()
-            .map(|p| p.join("PopMedia").join("logs").join("ai_dialogue"))
-            .unwrap_or_else(|| PathBuf::from("logs").join("ai_dialogue"));
-
-        let _ = fs::create_dir_all(&log_dir);
-
-        let timestamp = Local::now().format("%Y-%m-%d %H:%M:%S");
-        let sanitized_canvas = sanitize_filename(canvas);
-        let sanitized_node = sanitize_filename(node);
-
-        let file_time = Local::now().format("%Y%m%d_%H%M%S");
-        let log_file = log_dir.join(format!(
-            "{}_{}_{}_{}.log",
-            file_time, sanitized_canvas, sanitized_node, sid
-        ));
-
         // Extract user content from first message for logging
         let user_content = messages
             .first()
@@ -280,34 +308,17 @@ pub async fn send_chat_message_with_tools(
             .and_then(|c| c.as_str())
             .unwrap_or("");
 
-        let entry = format!(
-            "[{}]\n\
-             ========== AI Dialogue (Tool Mode) ==========\n\
-             Canvas: {}\n\
-             Node: {}\n\
-             Session: {}\n\
-             --------------------------------\n\
-             [User Input]\n{}\n\
-             --------------------------------\n\
-             [Tools Provided]\n{}\n\
-             --------------------------------\n\
-             [Raw Request]\n{}\n\
-             --------------------------------\n\
-             [Raw Response]\n{}\n\
-             ========== End ==========\n\n",
-            timestamp,
+        let tools_json = serde_json::to_string_pretty(&tools).unwrap_or_default();
+        log_ai_dialogue(
             canvas,
             node,
             sid,
             user_content,
-            serde_json::to_string_pretty(&tools).unwrap_or_default(),
-            raw_request,
-            raw_response
+            &raw_request,
+            &raw_response,
+            "(Tool Mode)",
+            Some(("Tools Provided", &tools_json)),
         );
-
-        if let Ok(mut file) = OpenOptions::new().create(true).append(true).open(&log_file) {
-            let _ = file.write_all(entry.as_bytes());
-        }
     }
 
     // Extract content and tool_calls
