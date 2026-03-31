@@ -106,6 +106,9 @@ pub struct TestConnectionResult {
     pub logs: Vec<String>,
     pub success: bool,
     pub message: String,
+    /// Whether the API supports tool calling (function calling)
+    #[serde(default)]
+    pub tool_call_support: Option<bool>,
 }
 
 // ==================== Canvas Models ====================

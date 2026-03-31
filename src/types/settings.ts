@@ -51,6 +51,8 @@ export interface TestConnectionResult {
   logs: string[]
   success: boolean
   message: string
+  /** Whether the API supports tool calling (function calling) */
+  tool_call_support?: boolean | null
 }
 
 export interface ProjectInfo {

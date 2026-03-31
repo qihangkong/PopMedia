@@ -1,4 +1,5 @@
 use crate::commands::http::extract_content_from_response;
+use crate::commands::http::extract_tool_calls_from_response;
 use crate::commands::AppState;
 use crate::models::{ComfyuiConfig, LlmConfig, LlmProviderType, TestConnectionResult};
 
@@ -25,6 +26,7 @@ pub async fn test_llm_connection(
             logs,
             success: false,
             message: "API URL 为空".to_string(),
+            tool_call_support: None,
         });
     }
 
@@ -34,6 +36,7 @@ pub async fn test_llm_connection(
             logs,
             success: false,
             message: "API Key 为空".to_string(),
+            tool_call_support: None,
         });
     }
 
@@ -80,6 +83,7 @@ pub async fn test_llm_connection(
             logs,
             success: false,
             message: format!("API 响应错误 ({}): {}", status, body),
+            tool_call_support: None,
         });
     }
 
@@ -99,11 +103,18 @@ pub async fn test_llm_connection(
 
     if let Some(text) = text {
         if !text.is_empty() {
-            log(&format!("测试成功! AI 回复: {}", text));
+            log(&format!("基础聊天测试成功! AI 回复: {}", text));
+            // Now test tool calling support
+            let tool_call_support = test_tool_calling_support(&state, &config, model_name, &mut log).await;
             return Ok(TestConnectionResult {
                 logs,
                 success: true,
-                message: format!("连接成功! AI 回复: {}", text),
+                message: if tool_call_support {
+                    format!("连接成功! AI 回复: {} | Tool Calling: 支持", text)
+                } else {
+                    format!("连接成功! AI 回复: {} | Tool Calling: 不支持", text)
+                },
+                tool_call_support: Some(tool_call_support),
             });
         }
     }
@@ -113,7 +124,151 @@ pub async fn test_llm_connection(
         logs,
         success: false,
         message: "API 响应格式无效".to_string(),
+        tool_call_support: None,
     })
+}
+
+/// Test if the LLM API supports tool calling (function calling)
+async fn test_tool_calling_support(
+    state: &tauri::State<'_, AppState>,
+    config: &LlmConfig,
+    model_name: &str,
+    log: &mut impl FnMut(&str),
+) -> bool {
+    log("========== 测试 Tool Calling 支持 ==========");
+
+    // Build a request with a simple weather tool
+    let (request_body, endpoint) = build_chat_request_with_tools(&config.provider_type, model_name);
+
+    let full_url = format!("{}{}", config.api_url.trim_end_matches('/'), endpoint);
+    log(&format!("Tool Calling 请求 URL: {}", full_url));
+
+    let request = state.http_client
+        .post(&full_url)
+        .header("Authorization", format!("Bearer {}", config.api_key))
+        .header("Content-Type", "application/json")
+        .json(&request_body);
+
+    match request.timeout(std::time::Duration::from_secs(30)).send().await {
+        Ok(response) => {
+            let status = response.status();
+            log(&format!("Tool Calling 响应状态码: {}", status));
+
+            if !status.is_success() {
+                log(&format!("Tool Calling 请求失败, 状态码: {}", status));
+                return false;
+            }
+
+            match response.json::<serde_json::Value>().await {
+                Ok(response_body) => {
+                    log(&format!("Tool Calling 响应体: {}", response_body));
+
+                    // Check if response contains tool_calls
+                    if let Some(tool_calls) = extract_tool_calls_from_response(&response_body) {
+                        if !tool_calls.is_empty() {
+                            log(&format!("检测到 Tool Calls: {:?}", tool_calls));
+                            return true;
+                        }
+                    }
+
+                    // Also check for Anthropic-style tool use in content blocks
+                    if let Some(content) = response_body.get("content").and_then(|c| c.as_array()) {
+                        for item in content {
+                            if item.get("type").and_then(|t| t.as_str()) == Some("tool_use") {
+                                log("检测到 Anthropic 风格的 tool_use");
+                                return true;
+                            }
+                        }
+                    }
+
+                    log("Tool Calling 响应中未检测到 tool_calls");
+                    false
+                }
+                Err(e) => {
+                    log(&format!("解析 Tool Calling 响应失败: {}", e));
+                    false
+                }
+            }
+        }
+        Err(e) => {
+            log(&format!("Tool Calling 请求失败: {}", e));
+            false
+        }
+    }
+}
+
+/// Build chat request body with tools for testing tool calling support
+fn build_chat_request_with_tools(
+    provider: &LlmProviderType,
+    model_name: &str,
+) -> (serde_json::Value, &'static str) {
+    let test_message = "请帮我查询北京的天气，使用 get_weather 工具";
+
+    // Define a simple weather tool
+    let tools = serde_json::json!([
+        {
+            "type": "function",
+            "function": {
+                "name": "get_weather",
+                "description": "获取指定城市的天气信息",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "location": {
+                            "type": "string",
+                            "description": "城市名称"
+                        }
+                    },
+                    "required": ["location"]
+                }
+            }
+        }
+    ]);
+
+    match provider {
+        LlmProviderType::Alibaba | LlmProviderType::AlibabaCoding => {
+            // 阿里通义
+            let body = serde_json::json!({
+                "model": model_name,
+                "input": {
+                    "messages": [
+                        {"role": "user", "content": test_message}
+                    ]
+                },
+                "parameters": {
+                    "max_tokens": 256,
+                    "temperature": 0.7,
+                    "tools": tools
+                }
+            });
+            (body, "/services/aigc/text-generation/generation")
+        }
+        LlmProviderType::VolcEngineCoding => {
+            // 火山引擎 Coding - Anthropic 格式
+            let body = serde_json::json!({
+                "model": model_name,
+                "messages": [
+                    {"role": "user", "content": test_message}
+                ],
+                "max_tokens": 256,
+                "tools": tools
+            });
+            (body, "/messages")
+        }
+        _ => {
+            // OpenAI, VolcEngine, Baidu, Zhipu, MiniMax, Custom - 标准格式
+            let body = serde_json::json!({
+                "model": model_name,
+                "messages": [
+                    {"role": "user", "content": test_message}
+                ],
+                "max_tokens": 256,
+                "temperature": 0.7,
+                "tools": tools
+            });
+            (body, "/chat/completions")
+        }
+    }
 }
 
 /// Build chat request body based on provider type
