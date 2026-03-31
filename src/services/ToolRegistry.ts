@@ -17,22 +17,12 @@ export interface UpstreamNodeInfo {
 /**
  * ToolRegistry - Manages all tools available to the AI
  *
+ * Stateless - canvas state is passed to each method
  * Provides:
  * - Node tools: read_node, write_node, list_nodes, get_upstream
  * - Skill tools: converted from SkillRegistry
  */
-class ToolRegistry {
-  // Current canvas state (set by Canvas/AIExecutionEngine)
-  private nodes: Node[] = []
-  private edges: Edge[] = []
-
-  /**
-   * Update the current canvas state
-   */
-  setCanvasState(nodes: Node[], edges: Edge[]) {
-    this.nodes = nodes
-    this.edges = edges
-  }
+export class ToolRegistry {
 
   /**
    * Get all node tool definitions
@@ -130,28 +120,28 @@ class ToolRegistry {
   }
 
   /**
-   * Find a node by ID
+   * Find a node by ID in the given nodes array
    */
-  private findNode(nodeId: string): Node | undefined {
-    return this.nodes.find(n => n.id === nodeId)
+  private findNode(nodeId: string, nodes: Node[]): Node | undefined {
+    return nodes.find(n => n.id === nodeId)
   }
 
   /**
-   * Execute a tool call and return the result
+   * Execute a tool call with the given canvas state
    */
-  async executeTool(toolCall: ToolCall): Promise<ToolResult> {
+  async executeTool(toolCall: ToolCall, nodes: Node[], edges: Edge[]): Promise<ToolResult> {
     const { name, arguments: args } = toolCall
 
     try {
       switch (name) {
         case 'read_node':
-          return this.executeReadNode(args)
+          return this.executeReadNode(args, nodes)
         case 'write_node':
-          return this.executeWriteNode(args)
+          return this.executeWriteNode(args, nodes)
         case 'list_nodes':
-          return this.executeListNodes(args)
+          return this.executeListNodes(args, nodes)
         case 'get_upstream':
-          return this.executeGetUpstream(args)
+          return this.executeGetUpstream(args, nodes, edges)
         default:
           // Check if it's a skill tool
           if (skillRegistry.findById(name)) {
@@ -173,12 +163,12 @@ class ToolRegistry {
   }
 
   /**
-   * Execute multiple tool calls
+   * Execute multiple tool calls with the given canvas state
    */
-  async executeToolCalls(toolCalls: ToolCall[]): Promise<ToolResult[]> {
+  async executeToolCalls(toolCalls: ToolCall[], nodes: Node[], edges: Edge[]): Promise<ToolResult[]> {
     const results: ToolResult[] = []
     for (const toolCall of toolCalls) {
-      const result = await this.executeTool(toolCall)
+      const result = await this.executeTool(toolCall, nodes, edges)
       results.push(result)
     }
     return results
@@ -186,13 +176,13 @@ class ToolRegistry {
 
   // ========== Tool Executors ==========
 
-  private executeReadNode(args: Record<string, unknown>): ToolResult {
+  private executeReadNode(args: Record<string, unknown>, nodes: Node[]): ToolResult {
     const nodeId = args.nodeId as string
     if (!nodeId) {
       return { name: 'read_node', output: '', error: 'nodeId is required' }
     }
 
-    const node = this.findNode(nodeId)
+    const node = this.findNode(nodeId, nodes)
     if (!node) {
       return { name: 'read_node', output: '', error: `Node not found: ${nodeId}` }
     }
@@ -211,7 +201,7 @@ class ToolRegistry {
     }
   }
 
-  private executeWriteNode(args: Record<string, unknown>): ToolResult {
+  private executeWriteNode(args: Record<string, unknown>, nodes: Node[]): ToolResult {
     const nodeId = args.nodeId as string
     const content = args.content as string
 
@@ -222,19 +212,14 @@ class ToolRegistry {
       return { name: 'write_node', output: '', error: 'content is required' }
     }
 
-    const node = this.findNode(nodeId)
+    const node = this.findNode(nodeId, nodes)
     if (!node) {
       return { name: 'write_node', output: '', error: `Node not found: ${nodeId}` }
     }
 
     const nodeData = node.data as unknown as NodeData
 
-    // For text/script nodes, write to content
-    // For block nodes, this is more complex but we focus on text nodes first
     if (nodeData.type === 'text' || nodeData.type === 'script' || nodeData.type === 'block') {
-      // Content will be written via React Flow state update
-      // The caller (AIExecutionEngine) needs to handle the actual state update
-      // Here we just return success
       return {
         name: 'write_node',
         output: JSON.stringify({
@@ -252,8 +237,8 @@ class ToolRegistry {
     }
   }
 
-  private executeListNodes(_args: Record<string, unknown>): ToolResult {
-    const nodeInfos = this.nodes.map(n => {
+  private executeListNodes(_args: Record<string, unknown>, nodes: Node[]): ToolResult {
+    const nodeInfos = nodes.map(n => {
       const data = n.data as unknown as NodeData
       return {
         nodeId: n.id,
@@ -271,7 +256,7 @@ class ToolRegistry {
     }
   }
 
-  private executeGetUpstream(args: Record<string, unknown>): ToolResult {
+  private executeGetUpstream(args: Record<string, unknown>, nodes: Node[], edges: Edge[]): ToolResult {
     const nodeId = args.nodeId as string
     const maxDepth = (args.maxDepth as number) || 2
 
@@ -279,7 +264,7 @@ class ToolRegistry {
       return { name: 'get_upstream', output: '', error: 'nodeId is required' }
     }
 
-    const upstreamNodes = this.getUpstreamNodes(nodeId, maxDepth)
+    const upstreamNodes = this.getUpstreamNodes(nodeId, maxDepth, nodes, edges)
 
     return {
       name: 'get_upstream',
@@ -292,9 +277,6 @@ class ToolRegistry {
   }
 
   private executeSkillTool(skillId: string, args: Record<string, unknown>): ToolResult {
-    // Skill tools are not executed by the frontend directly
-    // They are returned to the AI which should include them in the next turn
-    // The AI will then generate the actual skill content based on the skill's instructions
     return {
       name: skillId,
       output: JSON.stringify({
@@ -310,12 +292,12 @@ class ToolRegistry {
   /**
    * Get upstream nodes of a given node (without content)
    */
-  private getUpstreamNodes(nodeId: string, maxDepth: number = 2): UpstreamNodeInfo[] {
+  private getUpstreamNodes(nodeId: string, maxDepth: number, nodes: Node[], edges: Edge[]): UpstreamNodeInfo[] {
     const visited = new Set<string>()
     const result: UpstreamNodeInfo[] = []
-    const nodeMap = new Map(this.nodes.map(n => [n.id, n]))
+    const nodeMap = new Map(nodes.map(n => [n.id, n]))
 
-    this.traverseUpstream(nodeId, 0, maxDepth, visited, result, nodeMap)
+    this.traverseUpstream(nodeId, 0, maxDepth, visited, result, nodeMap, edges)
 
     return result
   }
@@ -326,12 +308,13 @@ class ToolRegistry {
     maxDepth: number,
     visited: Set<string>,
     result: UpstreamNodeInfo[],
-    nodeMap: Map<string, Node>
+    nodeMap: Map<string, Node>,
+    edges: Edge[]
   ) {
     if (visited.has(currentId) || currentDepth > maxDepth) return
     visited.add(currentId)
 
-    const upstreamEdges = this.edges.filter(e => e.target === currentId)
+    const upstreamEdges = edges.filter(e => e.target === currentId)
 
     for (const edge of upstreamEdges) {
       const sourceNode = nodeMap.get(edge.source)
@@ -345,10 +328,10 @@ class ToolRegistry {
         distance: currentDepth + 1
       })
 
-      this.traverseUpstream(sourceNode.id, currentDepth + 1, maxDepth, visited, result, nodeMap)
+      this.traverseUpstream(sourceNode.id, currentDepth + 1, maxDepth, visited, result, nodeMap, edges)
     }
   }
 }
 
-// Singleton instance
+// Singleton instance for backwards compatibility
 export const toolRegistry = new ToolRegistry()

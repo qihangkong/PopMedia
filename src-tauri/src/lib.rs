@@ -24,12 +24,23 @@ pub fn run() {
     if let Some(parent) = db_path.parent() {
         let _ = std::fs::create_dir_all(parent);
     }
-    let conn = rusqlite::Connection::open(&db_path).expect("Failed to open database");
-    init_database(&conn).expect("Failed to initialize database");
+    let conn = match rusqlite::Connection::open(&db_path) {
+        Ok(conn) => conn,
+        Err(e) => {
+            eprintln!("Failed to open database: {}", e);
+            std::process::exit(1);
+        }
+    };
+    if let Err(e) = init_database(&conn) {
+        eprintln!("Failed to initialize database: {}", e);
+        std::process::exit(1);
+    }
+
+    let http_client = create_http_client();
 
     let app_state = AppState {
         db: Mutex::new(conn),
-        http_client: create_http_client(),
+        http_client,
     };
 
     tauri::Builder::default()

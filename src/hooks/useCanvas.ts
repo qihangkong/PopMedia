@@ -18,7 +18,7 @@ import {
   getCanvasById,
 } from '../utils/tauriApi'
 import type { NodeData, NodeType } from '../types'
-import { getNodeMediaUrl } from '../types'
+import { getNodeMediaUrl, generateId } from '../types'
 
 // 创建节点数据的辅助函数
 function createNodeData(type: NodeType, label?: string): NodeData {
@@ -41,19 +41,10 @@ function createNodeData(type: NodeType, label?: string): NodeData {
   }
 }
 
-function generateUUID(): string {
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
-    const r = Math.random() * 16 | 0
-    const v = c === 'x' ? r : (r & 0x3 | 0x8)
-    return v.toString(16)
-  })
-}
-
 // Canvas ID management hook
 export function useCanvasId(loadCanvasFn: (id: string) => Promise<void>) {
   const [searchParams] = useSearchParams()
   const [canvasId, setCanvasId] = useState<string>('')
-  const [canvasName, setCanvasName] = useState('未命名的画布')
   const [isLoading, setIsLoading] = useState(true)
   const isInitializedRef = useRef(false)
 
@@ -62,17 +53,11 @@ export function useCanvasId(loadCanvasFn: (id: string) => Promise<void>) {
       const idFromUrl = searchParams.get('id')
       if (idFromUrl) {
         setCanvasId(idFromUrl)
-        try {
-          const meta = await getCanvasById(idFromUrl)
-          setCanvasName(meta.name)
-        } catch {
-          console.log('[Canvas] No meta found for:', idFromUrl)
-        }
         await loadCanvasFn(idFromUrl)
         isInitializedRef.current = true
         setIsLoading(false)
       } else {
-        const newId = generateUUID()
+        const newId = generateId()
         setCanvasId(newId)
         isInitializedRef.current = true
         setIsLoading(false)
@@ -85,9 +70,6 @@ export function useCanvasId(loadCanvasFn: (id: string) => Promise<void>) {
 
   return {
     canvasId,
-    setCanvasId,
-    canvasName,
-    setCanvasName,
     isLoading,
     isInitializedRef,
   }

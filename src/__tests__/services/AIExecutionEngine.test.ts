@@ -36,11 +36,12 @@ describe('AIExecutionEngine', () => {
   })
 
   describe('execute', () => {
-    it('should route to global chat for GLOBAL_CHAT mode', async () => {
-      await expect(engine.execute({
+    it('should return message for GLOBAL_CHAT mode (not yet implemented)', async () => {
+      const result = await engine.execute({
         mode: ChatMode.GLOBAL_CHAT,
         userInput: 'Hello AI',
-      })).rejects.toThrow('Global chat mode not yet implemented in agentic style')
+      })
+      expect(result).toContain('全局对话功能正在开发中')
     })
 
     it('should route to node execution for NODE mode (agentic)', async () => {
@@ -231,10 +232,9 @@ describe('AIExecutionEngine', () => {
   })
 
   describe('executeGlobalChat', () => {
-    it('should throw error as not yet implemented', async () => {
-      await expect(engine.executeGlobalChat('Hello world')).rejects.toThrow(
-        'Global chat mode not yet implemented in agentic style'
-      )
+    it('should return message as not yet implemented', async () => {
+      const result = await engine.executeGlobalChat('Hello world')
+      expect(result).toContain('全局对话功能正在开发中')
     })
   })
 })

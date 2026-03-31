@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useCallback, ReactNode } from 'react'
 import { sendChatMessage } from '../utils/chatApi'
+import { generateId } from '../types'
 
 export interface ChatMessage {
   id: string
@@ -22,10 +23,6 @@ interface ChatContextType {
 }
 
 const ChatContext = createContext<ChatContextType | undefined>(undefined)
-
-function generateId(): string {
-  return `msg_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`
-}
 
 export function ChatProvider({ children }: { children: ReactNode }) {
   const [messages, setMessages] = useState<ChatMessage[]>([])

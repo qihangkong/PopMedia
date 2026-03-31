@@ -4,6 +4,8 @@ interface CanvasContextType {
   // Canvas name for AI dialogue logging
   canvasName: string
   setCanvasName: (name: string) => void
+  // 初始化 canvas name（从后端加载）
+  initCanvasName: (canvasId: string) => Promise<void>
   // 节点右键菜单
   contextMenu: { nodeId: string; nodeType: string; x: number; y: number } | null
   onNodeContextMenu: (nodeId: string, nodeType: string, x: number, y: number) => void
@@ -54,11 +56,23 @@ export function CanvasProvider({ children }: { children: ReactNode }) {
     setPreviewVideo(null)
   }, [])
 
+  // 从后端加载 canvas name
+  const initCanvasName = useCallback(async (canvasId: string) => {
+    try {
+      const { getCanvasById } = await import('../utils/tauriApi')
+      const meta = await getCanvasById(canvasId)
+      setCanvasName(meta.name)
+    } catch {
+      console.log('[CanvasContext] No meta found for:', canvasId)
+    }
+  }, [])
+
   return (
     <CanvasContext.Provider
       value={{
         canvasName,
         setCanvasName,
+        initCanvasName,
         contextMenu,
         onNodeContextMenu,
         clearContextMenu,

@@ -140,9 +140,6 @@ export class AIExecutionEngine {
 
     const nodeData = node.data as unknown as NodeData
 
-    // Update tool registry with current canvas state
-    toolRegistry.setCanvasState(nodes, edges)
-
     try {
       onStateChange?.({ status: 'pending', progress: 'AI分析中...' })
 
@@ -180,7 +177,7 @@ export class AIExecutionEngine {
           // Execute each tool call
           const toolResults: ToolResult[] = []
           for (const toolCall of response.tool_calls) {
-            const result = await toolRegistry.executeTool(toolCall)
+            const result = await toolRegistry.executeTool(toolCall, nodes, edges)
 
             // Handle write_node - call the callback to update React state
             if (toolCall.name === 'write_node' && onWriteNode) {
@@ -299,9 +296,11 @@ ${userInput}`
 
   /**
    * 全局对话模式 (暂未实现agentic版本)
+   * TODO: 实现全局多轮对话支持
    */
   async executeGlobalChat(_userInput: string): Promise<string> {
-    throw new Error('Global chat mode not yet implemented in agentic style')
+    // TODO: 实现全局多轮对话支持
+    return '全局对话功能正在开发中，请使用节点 AI 对话'
   }
 }
 

@@ -44,10 +44,12 @@ export default function Canvas() {
     loadCanvas,
     saveCanvas,
   } = useCanvasData()
-  const { canvasId, canvasName, setCanvasName, isLoading, isInitializedRef } = useCanvasId(loadCanvas)
+  const { canvasId, isLoading, isInitializedRef } = useCanvasId(loadCanvas)
 
   const {
-    setCanvasName: setContextCanvasName,
+    canvasName,
+    setCanvasName,
+    initCanvasName,
     onNodeContextMenu,
     previewImage,
     onPreviewImage,
@@ -64,9 +66,12 @@ export default function Canvas() {
     onNodeContextMenu(node.id, nodeType, event.clientX, event.clientY)
   }, [onNodeContextMenu])
 
+  // Initialize canvas name from backend when canvasId changes
   useEffect(() => {
-    setContextCanvasName(canvasName)
-  }, [canvasName, setContextCanvasName])
+    if (canvasId) {
+      initCanvasName(canvasId)
+    }
+  }, [canvasId, initCanvasName])
 
   useCanvasAutoSave(canvasId, canvasName, nodes, edges, isInitializedRef, isLoading, saveCanvas)
 
