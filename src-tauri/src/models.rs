@@ -52,12 +52,12 @@ impl LlmProviderType {
     pub fn default_url(&self) -> &'static str {
         match self {
             LlmProviderType::OpenAi => "https://api.openai.com/v1",
-            LlmProviderType::VolcEngine => "https://ark.cn-beijing.volces.com/api/coding/v1",
+            LlmProviderType::VolcEngine => "https://ark.cn-beijing.volces.com/api/paas/v1",
             LlmProviderType::Baidu => "https://qianfan.baidubce.com/v2",
             LlmProviderType::Alibaba => "https://dashscope.aliyuncs.com/api/v1",
             LlmProviderType::Zhipu => "https://open.bigmodel.cn/api/paas/v4",
             LlmProviderType::MiniMax => "https://api.minimax.chat/v1",
-            LlmProviderType::VolcEngineCoding => "https://ark.cn-beijing.volces.com/api/coding/v1",
+            LlmProviderType::VolcEngineCoding => "https://ark.cn-beijing.volces.com/api/coding",
             LlmProviderType::AlibabaCoding => "https://dashscope.aliyuncs.com/api/v1",
             LlmProviderType::Custom => "",
         }
@@ -67,7 +67,8 @@ impl LlmProviderType {
     pub fn chat_endpoint(&self) -> &'static str {
         match self {
             LlmProviderType::OpenAi => "/chat/completions",
-            LlmProviderType::VolcEngine | LlmProviderType::VolcEngineCoding => "/chat/completions",
+            LlmProviderType::VolcEngine => "/chat/completions",
+            LlmProviderType::VolcEngineCoding => "/messages",
             LlmProviderType::Baidu => "/chat/completions",
             LlmProviderType::Alibaba | LlmProviderType::AlibabaCoding => "/services/aigc/text-generation/generation",
             LlmProviderType::Zhipu => "/chat/completions",

@@ -32,12 +32,10 @@ export interface ProviderInfo {
 
 export const LLM_PROVIDERS: ProviderInfo[] = [
   { type: 'alibaba', name: '阿里', description: '通义千问', isCoding: false },
-  { type: 'alibaba_coding', name: '阿里 (Coding)', description: 'qwen-coder', isCoding: true },
   { type: 'baidu', name: '百度', description: '文心一言', isCoding: false },
   { type: 'minimax', name: 'MiniMax', description: '海螺问问', isCoding: false },
   { type: 'openai', name: 'OpenAI', description: 'GPT 系列', isCoding: false },
   { type: 'volcengine', name: '火山引擎', description: '扣子/Coze (kimi, 等)', isCoding: false },
-  { type: 'volcengine_coding', name: '火山引擎 (Coding)', description: 'kimi-coder', isCoding: true },
   { type: 'zhipu', name: '智谱 AI', description: 'GLM-4', isCoding: false },
   { type: 'custom', name: '自定义', description: '手动填写 API URL', isCoding: false },
 ]

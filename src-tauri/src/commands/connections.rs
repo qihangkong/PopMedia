@@ -136,7 +136,7 @@ fn build_chat_request(
                     ]
                 },
                 "parameters": {
-                    "max_tokens": 50,
+                    "max_tokens": 256,
                     "temperature": 0.7
                 }
             });
@@ -149,7 +149,7 @@ fn build_chat_request(
                 "messages": [
                     {"role": "user", "content": test_message}
                 ],
-                "max_tokens": 50,
+                "max_tokens": 256,
                 "temperature": 0.7
             });
             (body, "/chat/completions")
@@ -161,7 +161,7 @@ fn build_chat_request(
                 "messages": [
                     {"role": "user", "content": test_message}
                 ],
-                "max_tokens": 50,
+                "max_tokens": 256,
                 "temperature": 0.7
             });
             (body, "/chat/completions")
@@ -173,10 +173,21 @@ fn build_chat_request(
                 "messages": [
                     {"role": "user", "content": test_message}
                 ],
-                "max_tokens": 50,
+                "max_tokens": 256,
                 "temperature": 0.7
             });
             (body, "/text/chatcompletion_v2")
+        }
+        LlmProviderType::VolcEngineCoding => {
+            // 火山引擎 Coding - Anthropic 兼容格式
+            let body = serde_json::json!({
+                "model": model_name,
+                "messages": [
+                    {"role": "user", "content": test_message}
+                ],
+                "max_tokens": 256
+            });
+            (body, "/messages")
         }
         _ => {
             // OpenAI, VolcEngine, Custom - 标准格式
@@ -185,7 +196,7 @@ fn build_chat_request(
                 "messages": [
                     {"role": "user", "content": test_message}
                 ],
-                "max_tokens": 50,
+                "max_tokens": 256,
                 "temperature": 0.7
             });
             (body, "/chat/completions")
@@ -222,6 +233,13 @@ fn extract_content_by_provider(provider: &LlmProviderType, response: &serde_json
             // MiniMax: choices[0].text
             response
                 .pointer("/choices/0/text")
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string())
+        }
+        LlmProviderType::VolcEngineCoding => {
+            // 火山引擎 Coding - Anthropic 兼容格式: content[0].text
+            response
+                .pointer("/content/0/text")
                 .and_then(|v| v.as_str())
                 .map(|s| s.to_string())
         }

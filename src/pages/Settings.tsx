@@ -120,8 +120,8 @@ export default function Settings() {
     const newConfig: LlmConfigWithStatus = {
       id: crypto.randomUUID(),
       name: '新的大语言模型',
-      provider_type: 'volcengine',
-      api_url: 'https://ark.cn-beijing.volces.com/api/coding/v1',
+      provider_type: 'openai',
+      api_url: 'https://api.openai.com/v1',
       api_key: '',
       model_name: '',
       connectionStatus: 'untested',
@@ -441,8 +441,10 @@ description: ${name}
                                   onChange={async (value) => {
                                     const provider = LLM_PROVIDERS.find(p => p.type === value)
                                     if (provider) {
-                                      const defaultUrl = provider.type === 'custom' ? '' : provider.type.startsWith('volcengine')
-                                        ? 'https://ark.cn-beijing.volces.com/api/coding/v1'
+                                      const defaultUrl = provider.type === 'custom' ? '' : provider.type === 'volcengine'
+                                        ? 'https://ark.cn-beijing.volces.com/api/paas/v1'
+                                        : provider.type === 'volcengine_coding'
+                                        ? 'https://ark.cn-beijing.volces.com/api/coding'
                                         : provider.type.startsWith('alibaba')
                                         ? 'https://dashscope.aliyuncs.com/api/v1'
                                         : provider.type === 'baidu'
