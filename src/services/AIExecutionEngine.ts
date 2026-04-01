@@ -1,5 +1,5 @@
 import type { Node, Edge } from '@xyflow/react'
-import { sendChatMessageWithTools as defaultSendChatMessageWithTools } from '../utils/chatApi'
+import { sendChatMessageWithTools as defaultSendChatMessageWithTools, logToolExecution } from '../utils/chatApi'
 import { UpstreamContextManager } from './UpstreamContextManager'
 import { skillRegistry } from './SkillRegistry'
 import { toolRegistry } from './ToolRegistry'
@@ -171,7 +171,8 @@ export class AIExecutionEngine {
           model,
           canvasName,
           nodeName,
-          sessionId
+          sessionId,
+          i + 1 // round number (1-indexed) for logging
         )
 
         // Check if LLM returned tool_calls
@@ -194,11 +195,20 @@ export class AIExecutionEngine {
               toolResults.push(skillResult)
             } else {
               // Regular tool - execute locally
+              const rawArgs = toolCall.function.arguments
+              const argsStr = typeof rawArgs === 'string' ? rawArgs : JSON.stringify(rawArgs)
               const result = await toolRegistry.executeTool(toolCall, nodes, edges)
+
+              // Log tool execution
+              await logToolExecution(
+                canvasName, nodeName, sessionId,
+                toolCall.function.name,
+                argsStr,
+                result.output
+              )
 
               // Handle write_node - call the callback to update React state
               if (toolCall.function.name === 'write_node' && onWriteNode) {
-                const rawArgs = toolCall.function.arguments
                 const parsedArgs = typeof rawArgs === 'string' ? JSON.parse(rawArgs) : rawArgs as { nodeId: string; content: string }
                 if (!result.error) {
                   onWriteNode(parsedArgs.nodeId, parsedArgs.content)
@@ -284,7 +294,8 @@ ${input}
         model,
         canvasName,
         nodeName,
-        sessionId
+        sessionId,
+        undefined // skill calls don't need round tracking
       )
 
       return {

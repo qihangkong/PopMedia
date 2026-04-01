@@ -112,6 +112,7 @@ export async function sendChatRequest(options: SendChatOptions): Promise<string>
  * @param canvasName Optional canvas name for logging
  * @param nodeName Optional node name for logging
  * @param sessionId Optional session ID for logging
+ * @param round Optional round number for agentic multi-turn logging
  */
 export async function sendChatMessageWithTools(
   messages: LlmMessage[],
@@ -119,7 +120,8 @@ export async function sendChatMessageWithTools(
   modelName?: string,
   canvasName?: string,
   nodeName?: string,
-  sessionId?: string
+  sessionId?: string,
+  round?: number
 ): Promise<LlmResponse> {
   try {
     const configs = await getLlmConfigs()
@@ -162,6 +164,7 @@ export async function sendChatMessageWithTools(
       canvasName: canvasName || null,
       nodeName: nodeName || null,
       sessionId: sessionId || null,
+      round: round ?? null,
     })
 
     return result
@@ -170,5 +173,31 @@ export async function sendChatMessageWithTools(
       throw err
     }
     throw new Error(`发送消息失败: ${err}`)
+  }
+}
+
+/**
+ * Log tool execution to the session log file
+ */
+export async function logToolExecution(
+  canvasName: string | undefined,
+  nodeName: string | undefined,
+  sessionId: string | undefined,
+  toolName: string,
+  toolArgs: string,
+  toolResult: string
+): Promise<void> {
+  try {
+    await invoke('log_tool_execution', {
+      canvasName: canvasName || null,
+      nodeName: nodeName || null,
+      sessionId: sessionId || null,
+      toolName,
+      toolArgs,
+      toolResult,
+    })
+  } catch (err) {
+    // Silently fail - logging should not interrupt execution
+    console.warn('Failed to log tool execution:', err)
   }
 }

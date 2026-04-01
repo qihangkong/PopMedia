@@ -44,15 +44,16 @@ fn sanitize_filename(s: &str) -> String {
 }
 
 /// Log AI dialogue to a per-session file
+/// The log file is named by session_id only, so all entries for the same session go to the same file.
+/// Each entry is marked with timestamp and a round number to distinguish different turns.
 fn log_ai_dialogue(
     canvas: &str,
     node: &str,
     sid: &str,
-    user_input: &str,
     raw_request: &str,
     raw_response: &str,
     mode_label: &str,
-    extra_content: Option<(&str, &str)>, // Optional (label, content) for additional sections
+    round: Option<usize>, // Round number for agentic multi-turn, starts from 1
 ) {
     let log_dir = dirs::data_local_dir()
         .map(|p| p.join("PopMedia").join("logs").join("ai_dialogue"))
@@ -66,41 +67,60 @@ fn log_ai_dialogue(
     let timestamp = Local::now().format("%Y-%m-%d %H:%M:%S");
     let sanitized_canvas = sanitize_filename(canvas);
     let sanitized_node = sanitize_filename(node);
-    let file_time = Local::now().format("%Y%m%d_%H%M%S");
 
+    // Use session_id only as filename to aggregate all entries for the same session
     let log_file = log_dir.join(format!(
-        "{}_{}_{}_{}.log",
-        file_time, sanitized_canvas, sanitized_node, sid
+        "{}_{}_{}.log",
+        sanitized_canvas, sanitized_node, sid
     ));
 
-    let mut entry = format!(
-        "[{}]\n\
-         ========== AI Dialogue {} ==========\n\
-         Canvas: {}\n\
-         Node: {}\n\
-         Session: {}\n\
-         --------------------------------\n\
-         [User Input]\n{}\n\
+    // Check if file exists to determine if this is a new session
+    let is_new_session = !log_file.exists();
+
+    // Add session header for new files
+    let mut entry = String::new();
+
+    if is_new_session {
+        entry.push_str(&format!(
+            "========== AI Dialogue Session ==========\n\
+             Canvas: {}\n\
+             Node: {}\n\
+             Session: {}\n\
+             Created: {}\n\
+             =========================================\n\n",
+            canvas,
+            node,
+            sid,
+            timestamp
+        ));
+    }
+
+    // Round marker for agentic mode
+    if let Some(r) = round {
+        entry.push_str(&format!(
+            "[{}] Round #{} starts\n",
+            timestamp, r
+        ));
+    } else {
+        entry.push_str(&format!(
+            "[{}]\n",
+            timestamp
+        ));
+    }
+
+    entry.push_str(&format!(
+        "========== AI Dialogue {} ==========\n\
          --------------------------------\n\
          [Raw Request]\n{}\n\
          --------------------------------\n\
          [Raw Response]\n{}",
-        timestamp,
         mode_label,
-        canvas,
-        node,
-        sid,
-        user_input,
         raw_request,
         raw_response
-    );
+    ));
 
-    if let Some((label, content)) = extra_content {
-        entry.push_str(&format!("\n         --------------------------------\n\
-         [{}]\n{}", label, content));
-    }
-
-    entry.push_str("\n         ========== End ==========\n\n");
+    entry.push_str("\n\
+         ========== End ==========\n\n");
 
     if let Ok(mut file) = OpenOptions::new().create(true).append(true).open(&log_file) {
         if let Err(e) = file.write_all(entry.as_bytes()) {
@@ -219,11 +239,10 @@ pub async fn send_chat_message(
             canvas,
             node,
             sid,
-            &message,
             &raw_request,
             &raw_response,
             "",
-            None,
+            None, // single-turn mode, no round tracking
         );
     }
 
@@ -248,6 +267,7 @@ pub async fn send_chat_message_with_tools(
     canvas_name: Option<String>,
     node_name: Option<String>,
     session_id: Option<String>,
+    round: Option<usize>, // Round number for agentic multi-turn logging
 ) -> Result<LlmResponse, String> {
     let http_client = state.http_client.clone();
     log::info!("发送带工具的聊天消息到 LLM: {}", config.name);
@@ -272,9 +292,6 @@ pub async fn send_chat_message_with_tools(
         "temperature": 0.7
     });
 
-    // Prepare tools JSON string for logging (defined outside the if block)
-    let mut tools_json_str: Option<String> = None;
-
     // Add tools if provided (manually serialize to ensure "type" field is correct)
     if !tools.is_empty() {
         let tools_json: Vec<serde_json::Value> = tools
@@ -291,8 +308,6 @@ pub async fn send_chat_message_with_tools(
             })
             .collect();
         request_body["tools"] = serde_json::json!(tools_json);
-        // Serialize for logging
-        tools_json_str = serde_json::to_string_pretty(&tools_json).ok();
     }
 
     let raw_request = request_body.to_string();
@@ -336,22 +351,14 @@ pub async fn send_chat_message_with_tools(
 
     // Log AI dialogue
     if let (Some(canvas), Some(node), Some(sid)) = (&canvas_name, &node_name, &session_id) {
-        // Extract user content from first message for logging
-        let user_content = messages
-            .first()
-            .and_then(|m| m.get("content"))
-            .and_then(|c| c.as_str())
-            .unwrap_or("");
-
         log_ai_dialogue(
             canvas,
             node,
             sid,
-            user_content,
             &raw_request,
             &raw_response,
             "(Tool Mode)",
-            tools_json_str.as_deref().map(|s| ("Tools Provided", s)),
+            round,
         );
     }
 
@@ -393,4 +400,55 @@ pub async fn send_chat_message_with_tools(
         tool_calls,
         error: None,
     })
+}
+
+/// Log tool execution to the same session log file
+#[tauri::command]
+pub async fn log_tool_execution(
+    canvas_name: Option<String>,
+    node_name: Option<String>,
+    session_id: Option<String>,
+    tool_name: String,
+    tool_args: String,
+    tool_result: String,
+) -> Result<(), String> {
+    let (Some(canvas), Some(node), Some(sid)) = (&canvas_name, &node_name, &session_id) else {
+        return Ok(()); // Skip logging if session info not provided
+    };
+
+    let log_dir = dirs::data_local_dir()
+        .map(|p| p.join("PopMedia").join("logs").join("ai_dialogue"))
+        .unwrap_or_else(|| PathBuf::from("logs").join("ai_dialogue"));
+
+    if let Err(e) = fs::create_dir_all(&log_dir) {
+        log::warn!("Failed to create log directory: {}", e);
+        return Ok(());
+    }
+
+    let sanitized_canvas = sanitize_filename(canvas);
+    let sanitized_node = sanitize_filename(node);
+
+    let log_file = log_dir.join(format!(
+        "{}_{}_{}.log",
+        sanitized_canvas, sanitized_node, sid
+    ));
+
+    let timestamp = Local::now().format("%Y-%m-%d %H:%M:%S");
+
+    let entry = format!(
+        "[{}] Tool Executed\n\
+         --------- Tool: {} ---------\n\
+         Args: {}\n\
+         Result: {}\n\
+         ==============================\n\n",
+        timestamp, tool_name, tool_args, tool_result
+    );
+
+    if let Ok(mut file) = OpenOptions::new().create(true).append(true).open(&log_file) {
+        if let Err(e) = file.write_all(entry.as_bytes()) {
+            log::warn!("Failed to write tool execution log: {}", e);
+        }
+    }
+
+    Ok(())
 }

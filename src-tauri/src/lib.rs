@@ -116,6 +116,7 @@ pub fn run() {
             // Chat
             commands::send_chat_message,
             commands::send_chat_message_with_tools,
+            commands::log_tool_execution,
             // Skills
             commands::list_skills,
             commands::read_skill,
