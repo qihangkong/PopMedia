@@ -195,7 +195,7 @@ pub async fn send_chat_message(
         "temperature": 0.7
     });
 
-    let raw_request = request_body.to_string();
+    let raw_request = serde_json::to_string_pretty(&request_body).unwrap_or_default();
 
     log::info!("发送请求到 {}/chat/completions", api_url);
 
@@ -229,7 +229,7 @@ pub async fn send_chat_message(
             format!("解析响应失败: {}", e)
         })?;
 
-    let raw_response = response_body.to_string();
+    let raw_response = serde_json::to_string_pretty(&response_body).unwrap_or_default();
 
     log::info!("收到响应: {}", response_body);
 
@@ -310,7 +310,7 @@ pub async fn send_chat_message_with_tools(
         request_body["tools"] = serde_json::json!(tools_json);
     }
 
-    let raw_request = request_body.to_string();
+    let raw_request = serde_json::to_string_pretty(&request_body).unwrap_or_default();
 
     log::info!("发送请求到 {}/chat/completions", api_url);
     log::info!("Request body: {}", raw_request);
@@ -345,7 +345,7 @@ pub async fn send_chat_message_with_tools(
             format!("解析响应失败: {}", e)
         })?;
 
-    let raw_response = response_body.to_string();
+    let raw_response = serde_json::to_string_pretty(&response_body).unwrap_or_default();
 
     log::info!("收到响应: {}", response_body);
 
