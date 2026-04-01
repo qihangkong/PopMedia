@@ -120,6 +120,13 @@ export class ToolRegistry {
   }
 
   /**
+   * Check if a tool name is a skill tool
+   */
+  isSkillTool(name: string): boolean {
+    return skillRegistry.findById(name) !== null
+  }
+
+  /**
    * Find a node by ID in the given nodes array
    */
   private findNode(nodeId: string, nodes: Node[]): Node | undefined {
@@ -130,22 +137,24 @@ export class ToolRegistry {
    * Execute a tool call with the given canvas state
    */
   async executeTool(toolCall: ToolCall, nodes: Node[], edges: Edge[]): Promise<ToolResult> {
-    const { name, arguments: args } = toolCall
+    const { name, arguments: args } = toolCall.function
+    // Parse arguments if it's a JSON string
+    const parsedArgs = typeof args === 'string' ? JSON.parse(args) : args
 
     try {
       switch (name) {
         case 'read_node':
-          return this.executeReadNode(args, nodes)
+          return this.executeReadNode(parsedArgs, nodes)
         case 'write_node':
-          return this.executeWriteNode(args, nodes)
+          return this.executeWriteNode(parsedArgs, nodes)
         case 'list_nodes':
-          return this.executeListNodes(args, nodes)
+          return this.executeListNodes(parsedArgs, nodes)
         case 'get_upstream':
-          return this.executeGetUpstream(args, nodes, edges)
+          return this.executeGetUpstream(parsedArgs, nodes, edges)
         default:
           // Check if it's a skill tool
           if (skillRegistry.findById(name)) {
-            return this.executeSkillTool(name, args)
+            return this.executeSkillTool(name, parsedArgs)
           }
           return {
             name,

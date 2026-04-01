@@ -5,10 +5,14 @@
       "Bash(git commit:*)",
       "Bash(npm run:*)",
       "Bash(npm install:*)",
+      "Bash(npm test:*)",
       "Bash(npx tauri:*)",
-      "Bash(cargo check:*)",
       "Bash(npx tsc:*)",
-      "Bash(npm test 2>&1)"
+      "Bash(npx vite:*)",
+      "Bash(npx vitest:*)",
+      "Bash(cargo check:*)",
+      "Bash(cargo run:*)",
+      "Bash(cargo build:*)"
     ]
   }
 }

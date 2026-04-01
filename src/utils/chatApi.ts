@@ -152,9 +152,12 @@ export async function sendChatMessageWithTools(
       config,
       messages: backendMessages,
       tools: tools.map(t => ({
-        name: t.name,
-        description: t.description,
-        input_schema: t.input_schema,
+        type: 'function',
+        function: {
+          name: t.name,
+          description: t.description,
+          parameters: t.input_schema,
+        },
       })),
       canvasName: canvasName || null,
       nodeName: nodeName || null,

@@ -299,9 +299,12 @@ describe('chatApi', () => {
       expect(result.content).toBe('The weather in Beijing is sunny.')
       expect(vi.mocked(invoke)).toHaveBeenCalledWith('send_chat_message_with_tools', expect.objectContaining({
         tools: mockTools.map(t => ({
-          name: t.name,
-          description: t.description,
-          input_schema: t.input_schema,
+          type: 'function',
+          function: {
+            name: t.name,
+            description: t.description,
+            parameters: t.input_schema,
+          },
         })),
       }))
     })
@@ -320,15 +323,15 @@ describe('chatApi', () => {
         .mockResolvedValueOnce({
           content: null,
           tool_calls: [
-            { name: 'get_weather', arguments: { location: 'Beijing' } },
+            { id: 'call_123', type: 'function', function: { name: 'get_weather', arguments: { location: 'Beijing' } } },
           ],
         } as LlmResponse)
 
       const result = await sendChatMessageWithTools(mockMessages, mockTools)
 
       expect(result.tool_calls).toHaveLength(1)
-      expect(result.tool_calls?.[0].name).toBe('get_weather')
-      expect(result.tool_calls?.[0].arguments).toEqual({ location: 'Beijing' })
+      expect(result.tool_calls?.[0].function.name).toBe('get_weather')
+      expect(result.tool_calls?.[0].function.arguments).toEqual({ location: 'Beijing' })
     })
 
     it('should pass optional parameters to backend', async () => {
@@ -407,9 +410,9 @@ describe('chatApi', () => {
         {
           role: 'assistant',
           content: '',
-          tool_calls: [{ name: 'get_weather', arguments: { location: 'Beijing' } }],
+          tool_calls: [{ id: 'call_123', type: 'function', function: { name: 'get_weather', arguments: { location: 'Beijing' } } }],
         },
-        { role: 'tool', content: '{"temperature":25}', tool_call_id: 'tool_0' },
+        { role: 'tool', content: '{"temperature":25}', tool_call_id: 'call_123', tool_calls: [{ id: 'call_123', type: 'function', function: { name: 'get_weather', arguments: { location: 'Beijing' } } }] },
       ]
 
       vi.mocked(invoke)

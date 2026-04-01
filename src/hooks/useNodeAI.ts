@@ -33,6 +33,14 @@ export function useNodeAI(nodeId: string) {
     const nodeName = nodeData?.label || '未命名节点'
     const sessionId = Math.random().toString(36).substring(2, 9)
 
+    // Default onWriteNode uses updateContent for the current node
+    const handleWriteNode = onWriteNode || ((targetNodeId: string, content: string) => {
+      // Only update if writing to the current node
+      if (targetNodeId === nodeId) {
+        updateContent(content)
+      }
+    })
+
     const options: ExecutionOptions = {
       mode: ChatMode.NODE_AGENTIC,
       userInput,
@@ -45,7 +53,7 @@ export function useNodeAI(nodeId: string) {
       nodeName,
       sessionId,
       onStateChange: setExecutionState,
-      onWriteNode,
+      onWriteNode: handleWriteNode,
     }
 
     try {

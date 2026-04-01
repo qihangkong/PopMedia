@@ -67,8 +67,12 @@ export interface ToolDefinition {
 
 // Tool 调用 (LLM 返回)
 export interface ToolCall {
-  name: string
-  arguments: Record<string, unknown>
+  id: string
+  type: string
+  function: {
+    name: string
+    arguments: string | Record<string, unknown>  // string when from API, object after parsing
+  }
 }
 
 // Tool 执行结果
@@ -87,7 +91,7 @@ export interface LlmResponse {
 
 // 消息格式 (用于多轮对话)
 export interface LlmMessage {
-  role: 'user' | 'assistant' | 'system'
+  role: 'user' | 'assistant' | 'system' | 'tool'
   content: string
   tool_calls?: ToolCall[]
   tool_call_id?: string

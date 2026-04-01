@@ -9,8 +9,17 @@ use std::io::Write;
 use std::path::PathBuf;
 
 /// Tool call from LLM
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct ToolCall {
+    pub id: String,
+    #[serde(rename = "type")]
+    pub type_: String,
+    pub function: FunctionInfo,
+}
+
+/// Function info inside tool call
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct FunctionInfo {
     pub name: String,
     pub arguments: serde_json::Value,
 }
@@ -115,12 +124,20 @@ fn validate_llm_config(config: &LlmConfig) -> Result<String, String> {
     Ok(config.api_url.trim_end_matches('/').to_string())
 }
 
-/// Tool definition for the request
+/// Tool definition for the request (OpenAI-compatible format)
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct ToolDefinition {
+    #[serde(rename = "type", default)]
+    pub type_: Option<String>,
+    pub function: FunctionDefinition,
+}
+
+/// Function definition inside tool
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct FunctionDefinition {
     pub name: String,
     pub description: String,
-    pub input_schema: serde_json::Value,
+    pub parameters: serde_json::Value,
 }
 
 /// Send a chat message to the LLM and get a response
@@ -154,7 +171,7 @@ pub async fn send_chat_message(
         "messages": [
             {"role": "user", "content": message}
         ],
-        "max_tokens": 2000,
+        "max_tokens": 65536,
         "temperature": 0.7
     });
 
@@ -251,19 +268,37 @@ pub async fn send_chat_message_with_tools(
     let mut request_body = serde_json::json!({
         "model": model_name,
         "messages": messages,
-        "max_tokens": 4000,
+        "max_tokens": 65536,
         "temperature": 0.7
     });
 
-    // Add tools if provided
+    // Prepare tools JSON string for logging (defined outside the if block)
+    let mut tools_json_str: Option<String> = None;
+
+    // Add tools if provided (manually serialize to ensure "type" field is correct)
     if !tools.is_empty() {
-        request_body["tools"] = serde_json::json!(tools);
+        let tools_json: Vec<serde_json::Value> = tools
+            .into_iter()
+            .map(|t| {
+                serde_json::json!({
+                    "type": "function",
+                    "function": {
+                        "name": t.function.name,
+                        "description": t.function.description,
+                        "parameters": t.function.parameters,
+                    }
+                })
+            })
+            .collect();
+        request_body["tools"] = serde_json::json!(tools_json);
+        // Serialize for logging
+        tools_json_str = serde_json::to_string_pretty(&tools_json).ok();
     }
 
     let raw_request = request_body.to_string();
 
     log::info!("发送请求到 {}/chat/completions", api_url);
-    log::debug!("Request body: {}", raw_request);
+    log::info!("Request body: {}", raw_request);
 
     let response = http_client
         .post(&format!("{}/chat/completions", api_url))
@@ -308,7 +343,6 @@ pub async fn send_chat_message_with_tools(
             .and_then(|c| c.as_str())
             .unwrap_or("");
 
-        let tools_json = serde_json::to_string_pretty(&tools).unwrap_or_default();
         log_ai_dialogue(
             canvas,
             node,
@@ -317,7 +351,7 @@ pub async fn send_chat_message_with_tools(
             &raw_request,
             &raw_response,
             "(Tool Mode)",
-            Some(("Tools Provided", &tools_json)),
+            tools_json_str.as_deref().map(|s| ("Tools Provided", s)),
         );
     }
 
@@ -330,9 +364,20 @@ pub async fn send_chat_message_with_tools(
         tc_list
             .into_iter()
             .filter_map(|tc| {
-                let name = tc.get("name")?.as_str()?.to_string();
-                let arguments = tc.get("arguments")?.clone();
-                Some(ToolCall { name, arguments })
+                // OpenAI format: tool_calls[].id, tool_calls[].type, tool_calls[].function.name, tool_calls[].function.arguments
+                let id = tc.get("id")?.as_str()?.to_owned();
+                let type_ = tc.get("type")
+                    .and_then(|v| v.as_str())
+                    .map(|s| s.to_owned())
+                    .unwrap_or_else(|| "function".to_owned());
+                let function_obj = tc.get("function")?;
+                let name = function_obj.get("name")?.as_str()?.to_owned();
+                let arguments = function_obj.get("arguments")?.clone();
+                Some(ToolCall {
+                    id,
+                    type_,
+                    function: FunctionInfo { name, arguments }
+                })
             })
             .collect()
     });

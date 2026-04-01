@@ -199,7 +199,7 @@ describe('AIExecutionEngine', () => {
         .mockResolvedValueOnce({
           content: '',
           tool_calls: [
-            { name: 'read_node', arguments: { nodeId: 'node1' } }
+            { id: 'call_123', type: 'function', function: { name: 'read_node', arguments: { nodeId: 'node1' } } }
           ],
           error: undefined,
         })

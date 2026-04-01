@@ -117,6 +117,8 @@ export class AIExecutionEngine {
    * 2. 执行tool (read_node等)，将结果添加到消息
    * 3. AI继续分析，决定下一步
    * 4. 循环直到AI返回最终回复
+   *
+   * Token优化: 只在第一次发送完整prompt和tools，后续只发送必要的对话历史
    */
   async executeNodeTask(
     userInput: string,
@@ -149,7 +151,7 @@ export class AIExecutionEngine {
       // Get all available tools
       const tools = toolRegistry.getAllTools()
 
-      // Initialize messages array
+      // Initialize messages array - only the initial user message
       const messages: LlmMessage[] = [
         {
           role: 'user',
@@ -177,17 +179,34 @@ export class AIExecutionEngine {
           // Execute each tool call
           const toolResults: ToolResult[] = []
           for (const toolCall of response.tool_calls) {
-            const result = await toolRegistry.executeTool(toolCall, nodes, edges)
+            // Check if it's a skill tool - execute via LLM
+            if (toolRegistry.isSkillTool(toolCall.function.name)) {
+              const rawArgs = toolCall.function.arguments
+              const args = typeof rawArgs === 'string' ? JSON.parse(rawArgs) : rawArgs as { input: string }
+              const skillResult = await this.executeSkillTool(
+                toolCall.function.name,
+                args.input || '',
+                model,
+                canvasName,
+                nodeName,
+                sessionId
+              )
+              toolResults.push(skillResult)
+            } else {
+              // Regular tool - execute locally
+              const result = await toolRegistry.executeTool(toolCall, nodes, edges)
 
-            // Handle write_node - call the callback to update React state
-            if (toolCall.name === 'write_node' && onWriteNode) {
-              const args = toolCall.arguments as { nodeId: string; content: string }
-              if (!result.error) {
-                onWriteNode(args.nodeId, args.content)
+              // Handle write_node - call the callback to update React state
+              if (toolCall.function.name === 'write_node' && onWriteNode) {
+                const rawArgs = toolCall.function.arguments
+                const parsedArgs = typeof rawArgs === 'string' ? JSON.parse(rawArgs) : rawArgs as { nodeId: string; content: string }
+                if (!result.error) {
+                  onWriteNode(parsedArgs.nodeId, parsedArgs.content)
+                }
               }
-            }
 
-            toolResults.push(result)
+              toolResults.push(result)
+            }
           }
 
           // Add assistant's tool_calls message
@@ -197,13 +216,16 @@ export class AIExecutionEngine {
             tool_calls: response.tool_calls
           })
 
-          // Add tool results as user messages
+          // Add tool results as tool messages (with tool_call_id to link back)
           for (let j = 0; j < response.tool_calls.length; j++) {
             const toolCall = response.tool_calls[j]
             const result = toolResults[j]
             messages.push({
-              role: 'user',
-              content: `Tool result for "${toolCall.name}":\n${result.output}${result.error ? `\nError: ${result.error}` : ''}`
+              role: 'tool',
+              tool_call_id: toolCall.id,
+              content: `${result.output}${result.error ? `\nError: ${result.error}` : ''}`,
+              // VolcEngine API requires tool_calls to be present in tool result messages
+              tool_calls: [toolCall]
             })
           }
         } else {
@@ -222,6 +244,58 @@ export class AIExecutionEngine {
       const errorMessage = error instanceof Error ? error.message : '未知错误'
       onStateChange?.({ status: 'error', error: errorMessage })
       throw error
+    }
+  }
+
+  /**
+   * 执行Skill工具 - 通过LLM生成转换结果
+   */
+  private async executeSkillTool(
+    skillId: string,
+    input: string,
+    model: string | undefined,
+    canvasName: string | undefined,
+    nodeName: string | undefined,
+    sessionId: string | undefined
+  ): Promise<ToolResult> {
+    try {
+      // Get skill body (system prompt) from registry
+      const skillBody = await skillRegistry.getSkillBody(skillId)
+      if (!skillBody) {
+        return {
+          name: skillId,
+          output: '',
+          error: `Skill "${skillId}" not found or has no content`
+        }
+      }
+
+      // Build prompt for skill execution
+      const skillPrompt = `${skillBody}
+
+用户输入:
+${input}
+
+请根据上述技能要求处理用户输入，并直接输出处理结果（不需要调用工具）。`
+
+      // Call LLM to execute the skill
+      const response = await this.sendChatMessageFn(
+        [{ role: 'user', content: skillPrompt }],
+        [], // No tools needed for skill execution
+        model,
+        canvasName,
+        nodeName,
+        sessionId
+      )
+
+      return {
+        name: skillId,
+        output: response.content || 'Skill executed but no output returned'
+      }
+    } catch (err) {
+      // Skill execution failed - throw error instead of returning it as a tool result
+      // to avoid the error being sent back to LLM and causing a loop
+      const errorMsg = `Skill "${skillId}" execution failed: ${err instanceof Error ? err.message : String(err)}`
+      throw new Error(errorMsg)
     }
   }
 
