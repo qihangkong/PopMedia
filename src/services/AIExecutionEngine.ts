@@ -9,59 +9,34 @@ import type { NodeData } from '../types'
 // Type for the chat API function (allows dependency injection)
 type SendChatMessageFn = typeof defaultSendChatMessageWithTools
 
-// 角色对应的System Prompt
+// 角色对应的System Prompt (通用版)
 const ROLE_PROMPTS: Record<string, string> = {
-  'writer': `你是一个专业的剧本创作助手。
-
-规则：
-- 深入理解素材的核心情节和人物
-- 剧本格式：场景编号 | 场景描述 | 角色对白 | 动作指示
-- 保持原素材的创意和情感
-- 对白要自然，符合角色性格`,
-
-  'summarizer': `你是一个文本摘要专家。
-
-规则：
-- 提取核心信息和关键点
-- 保持逻辑连贯性
-- 长度控制在原文的1/3到1/2
-- 使用简洁清晰的语言`,
-
-  'translator': `你是一个专业翻译。
-
-规则：
-- 保持原文风格和语气
-- 符合目标语言的表达习惯
-- 专业术语准确翻译`,
-
-  'analyzer': `你是一个内容分析专家。
-
-规则：
-- 深入分析内容结构和逻辑
-- 识别关键主题和论点
-- 提供建设性的分析意见`,
-
-  'generator': `你是一个内容生成专家。
-
-规则：
-- 根据素材生成相关的内容
-- 保持创意性和实用性
-- 输出格式清晰`,
-
-  'editor': `你是一个文字编辑。
-
-规则：
-- 优化语言表达
-- 保持原文意图
-- 提升可读性和专业性`,
-
-  'reviewer': `你是一个评论专家。
-
-规则：
-- 客观公正地评价内容
-- 提出具体改进建议
-- 肯定优点，指出不足`
+  'writer': `你是一个内容创作助手。`,
+  'summarizer': `你是一个内容创作助手。`,
+  'translator': `你是一个内容创作助手。`,
+  'analyzer': `你是一个内容创作助手。`,
+  'generator': `你是一个内容创作助手。`,
+  'editor': `你是一个内容创作助手。`,
+  'reviewer': `你是一个内容创作助手。`
 }
+
+// 工具说明模板
+const TOOL_GUIDE = `## 工具
+
+**节点操作**:
+- read_node(nodeId): 读取指定节点的内容
+- write_node(nodeId, content): 向指定节点写入内容
+- list_nodes(): 列出所有节点
+- get_upstream(nodeId, maxDepth?): 获取上游节点信息
+
+**技能 (SKILL)**: 当你需要对内容进行专业化处理时，先获取技能文档，然后按文档指示处理
+- get_skill(skill_id): 获取技能文档（.md），返回技能的完整提示词和使用方法
+- 技能列表: script-converter (剧本转换), summarize (摘要), translate (翻译)
+
+## 注意
+- 你可以多次调用工具来完成复杂任务
+- 如果技能工具无法满足需求，可以直接处理
+- 灵活运用你的能力来满足用户需求`
 
 export enum ChatMode {
   GLOBAL_CHAT = 'global',    // 全局多轮对话
@@ -145,17 +120,19 @@ export class AIExecutionEngine {
     try {
       onStateChange?.({ status: 'pending', progress: 'AI分析中...' })
 
-      // Build initial prompt with context info (NO upstream content pre-fetched)
-      const initialPrompt = this.buildPrompt(userInput, nodeId, nodeData, nodes, edges, hiddenNodeIds)
-
       // Get all available tools
       const tools = toolRegistry.getAllTools()
 
-      // Initialize messages array - only the initial user message
+      // Initialize messages array - system prompt + user message
+      const { systemPrompt, userMessage } = this.buildPrompt(userInput, nodeId, nodeData, nodes, edges, hiddenNodeIds)
       const messages: LlmMessage[] = [
         {
+          role: 'system',
+          content: systemPrompt
+        },
+        {
           role: 'user',
-          content: initialPrompt
+          content: userMessage
         }
       ]
 
@@ -180,43 +157,28 @@ export class AIExecutionEngine {
           // Execute each tool call
           const toolResults: ToolResult[] = []
           for (const toolCall of response.tool_calls) {
-            // Check if it's a skill tool - execute via LLM
-            if (toolRegistry.isSkillTool(toolCall.function.name)) {
-              const rawArgs = toolCall.function.arguments
-              const args = typeof rawArgs === 'string' ? JSON.parse(rawArgs) : rawArgs as { input: string }
-              const skillResult = await this.executeSkillTool(
-                toolCall.function.name,
-                args.input || '',
-                model,
-                canvasName,
-                nodeName,
-                sessionId
-              )
-              toolResults.push(skillResult)
-            } else {
-              // Regular tool - execute locally
-              const rawArgs = toolCall.function.arguments
-              const argsStr = typeof rawArgs === 'string' ? rawArgs : JSON.stringify(rawArgs)
-              const result = await toolRegistry.executeTool(toolCall, nodes, edges)
+            // Regular tool - execute locally
+            const rawArgs = toolCall.function.arguments
+            const argsStr = typeof rawArgs === 'string' ? rawArgs : JSON.stringify(rawArgs)
+            const result = await toolRegistry.executeTool(toolCall, nodes, edges)
 
-              // Log tool execution
-              await logToolExecution(
-                canvasName, nodeName, sessionId,
-                toolCall.function.name,
-                argsStr,
-                result.output
-              )
+            // Log tool execution
+            await logToolExecution(
+              canvasName, nodeName, sessionId,
+              toolCall.function.name,
+              argsStr,
+              result.output
+            )
 
-              // Handle write_node - call the callback to update React state
-              if (toolCall.function.name === 'write_node' && onWriteNode) {
-                const parsedArgs = typeof rawArgs === 'string' ? JSON.parse(rawArgs) : rawArgs as { nodeId: string; content: string }
-                if (!result.error) {
-                  onWriteNode(parsedArgs.nodeId, parsedArgs.content)
-                }
+            // Handle write_node - call the callback to update React state
+            if (toolCall.function.name === 'write_node' && onWriteNode) {
+              const parsedArgs = typeof rawArgs === 'string' ? JSON.parse(rawArgs) : rawArgs as { nodeId: string; content: string }
+              if (!result.error) {
+                onWriteNode(parsedArgs.nodeId, parsedArgs.content)
               }
-
-              toolResults.push(result)
             }
+
+            toolResults.push(result)
           }
 
           // Add assistant's tool_calls message
@@ -258,61 +220,8 @@ export class AIExecutionEngine {
   }
 
   /**
-   * 执行Skill工具 - 通过LLM生成转换结果
-   */
-  private async executeSkillTool(
-    skillId: string,
-    input: string,
-    model: string | undefined,
-    canvasName: string | undefined,
-    nodeName: string | undefined,
-    sessionId: string | undefined
-  ): Promise<ToolResult> {
-    try {
-      // Get skill body (system prompt) from registry
-      const skillBody = await skillRegistry.getSkillBody(skillId)
-      if (!skillBody) {
-        return {
-          name: skillId,
-          output: '',
-          error: `Skill "${skillId}" not found or has no content`
-        }
-      }
-
-      // Build prompt for skill execution
-      const skillPrompt = `${skillBody}
-
-用户输入:
-${input}
-
-请根据上述技能要求处理用户输入，并直接输出处理结果（不需要调用工具）。`
-
-      // Call LLM to execute the skill
-      const response = await this.sendChatMessageFn(
-        [{ role: 'user', content: skillPrompt }],
-        [], // No tools needed for skill execution
-        model,
-        canvasName,
-        nodeName,
-        sessionId,
-        undefined // skill calls don't need round tracking
-      )
-
-      return {
-        name: skillId,
-        output: response.content || 'Skill executed but no output returned'
-      }
-    } catch (err) {
-      // Skill execution failed - throw error instead of returning it as a tool result
-      // to avoid the error being sent back to LLM and causing a loop
-      const errorMsg = `Skill "${skillId}" execution failed: ${err instanceof Error ? err.message : String(err)}`
-      throw new Error(errorMsg)
-    }
-  }
-
-  /**
    * 构建提示词
-   * 只传递元数据，不预取上游内容
+   * 返回系统提示词和用户消息分开
    */
   private buildPrompt(
     userInput: string,
@@ -321,7 +230,7 @@ ${input}
     nodes: Node[],
     edges: Edge[],
     hiddenNodeIds: Set<string> | undefined
-  ): string {
+  ): { systemPrompt: string; userMessage: string } {
     const aiConfig = nodeData.aiConfig
 
     // 获取角色对应的 system prompt
@@ -344,39 +253,31 @@ ${input}
 
     // Skill 列表
     const skills = skillRegistry.getAll()
-    const skillList = skills.map(s => `- ${s.id}: ${s.description}`).join('\n')
+    const skillDescriptions = skills.map(s => `- **${s.id}**：${s.description}`).join('\n')
 
-    return `${rolePrompt}
+    // 系统提示词 - 保持简洁
+    const systemPrompt = `${rolePrompt}
 
-## 当前任务节点
-- 节点ID: ${currentNodeId}
-- 节点类型: ${nodeData.type}
-- 节点角色: ${aiConfig?.role || 'generator'}
+${TOOL_GUIDE}
 
-## 画布节点列表
-${nodeList || '（无其他节点）'}
+## 可用技能
+${skillDescriptions || '（无可用技能）'}`
 
-## 当前节点的上游节点
-${upstreamList || '（无上游节点）'}
+    // 用户消息 - 包含任务上下文
+    const userMessage = `## 当前任务
 
-## 可用的SKILL工具
-${skillList || '（无可用SKILL）'}
+**节点**: ${currentNodeId} (${nodeData.type})
+**角色**: ${aiConfig?.role || 'generator'}
 
-## 你的工具
-你可以使用以下工具来完成任务：
-- read_node(nodeId): 读取指定节点的内容
-- write_node(nodeId, content): 向指定节点写入内容
-- list_nodes(): 列出所有节点
-- get_upstream(nodeId, maxDepth?): 获取节点的上游信息
+## 画布结构
+${nodeList ? `**所有节点**:\n${nodeList}` : '（无其他节点）'}
 
-## 规则
-1. 如果需要处理上游内容，先用 read_node 读取
-2. 如果需要使用 SKILL，使用 skill 工具并传入需要处理的内容
-3. 如果需要将结果写入节点，使用 write_node
-4. 完成后返回最终结果给用户
+${upstreamList ? `**上游节点** (可读取内容):\n${upstreamList}` : '（无上游节点）'}
 
 ## 用户指令
 ${userInput}`
+
+    return { systemPrompt, userMessage }
   }
 
   /**

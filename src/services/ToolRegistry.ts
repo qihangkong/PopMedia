@@ -92,38 +92,34 @@ export class ToolRegistry {
   }
 
   /**
-   * Get skill tools converted from SkillRegistry
-   */
-  getSkillTools(): ToolDefinition[] {
-    const skills = skillRegistry.getAll()
-    return skills.map(skill => ({
-      name: skill.id,
-      description: skill.description,
-      input_schema: {
-        type: 'object',
-        properties: {
-          input: {
-            type: 'string',
-            description: '需要处理的输入内容'
-          }
-        },
-        required: ['input']
-      }
-    }))
-  }
-
-  /**
    * Get all available tools (node tools + skill tools)
    */
   getAllTools(): ToolDefinition[] {
-    return [...this.getNodeTools(), ...this.getSkillTools()]
+    const nodeTools = this.getNodeTools()
+    const skillTools = this.getSkillTools()
+    return [...nodeTools, ...skillTools]
   }
 
   /**
-   * Check if a tool name is a skill tool
+   * Get skill tool definition
    */
-  isSkillTool(name: string): boolean {
-    return skillRegistry.findById(name) !== null
+  getSkillTools(): ToolDefinition[] {
+    return [
+      {
+        name: 'get_skill',
+        description: '获取技能文档。当你需要使用某个技能（如剧本转换、摘要、翻译）时，先用此工具获取技能说明。',
+        input_schema: {
+          type: 'object',
+          properties: {
+            skill_id: {
+              type: 'string',
+              description: '技能ID（如 script-converter, summarize, translate）'
+            }
+          },
+          required: ['skill_id']
+        }
+      }
+    ]
   }
 
   /**
@@ -151,11 +147,9 @@ export class ToolRegistry {
           return this.executeListNodes(parsedArgs, nodes)
         case 'get_upstream':
           return this.executeGetUpstream(parsedArgs, nodes, edges)
+        case 'get_skill':
+          return this.executeGetSkill(parsedArgs)
         default:
-          // Check if it's a skill tool
-          if (skillRegistry.findById(name)) {
-            return this.executeSkillTool(name, parsedArgs)
-          }
           return {
             name,
             output: '',
@@ -285,14 +279,21 @@ export class ToolRegistry {
     }
   }
 
-  private executeSkillTool(skillId: string, args: Record<string, unknown>): ToolResult {
+  private async executeGetSkill(args: Record<string, unknown>): Promise<ToolResult> {
+    const skillId = args.skill_id as string
+
+    if (!skillId) {
+      return { name: 'get_skill', output: '', error: 'skill_id is required' }
+    }
+
+    const skillBody = await skillRegistry.getSkillBody(skillId)
+    if (!skillBody) {
+      return { name: 'get_skill', output: '', error: `Skill "${skillId}" not found` }
+    }
+
     return {
-      name: skillId,
-      output: JSON.stringify({
-        skillId,
-        message: `Skill "${skillId}" selected. The AI will now generate content using this skill's instructions.`,
-        input: args.input
-      })
+      name: 'get_skill',
+      output: skillBody
     }
   }
 
