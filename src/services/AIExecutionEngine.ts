@@ -4,10 +4,67 @@ import { UpstreamContextManager } from './UpstreamContextManager'
 import { skillRegistry } from './SkillRegistry'
 import { toolRegistry } from './ToolRegistry'
 import type { ExecutionState, LlmMessage, ToolResult } from '../types/ai'
-import type { NodeData } from '../types'
+import type { NodeData, BlockContent } from '../types'
 
 // Type for the chat API function (allows dependency injection)
 type SendChatMessageFn = typeof defaultSendChatMessageWithTools
+
+// write_node 解析后的数据结构
+export interface WriteNodeData {
+  content?: string
+  imageUrl?: string
+  videoUrl?: string
+  audioUrl?: string
+  contents?: BlockContent[]
+}
+
+/**
+ * 解析 write_node 的 content 参数，根据节点类型提取对应字段
+ */
+function parseWriteNodeData(parsed: Record<string, unknown>, nodeType: string): WriteNodeData {
+  switch (nodeType) {
+    case 'text':
+    case 'script':
+      return { content: parsed.textnode as string || parsed.content as string }
+    case 'image':
+      return { imageUrl: parsed.image as string }
+    case 'video':
+      return { videoUrl: parsed.video as string }
+    case 'audio':
+      return { audioUrl: parsed.audio as string }
+    case 'block':
+      // block 节点: { block: [{textnode: "..."}, {image: "..."}] }
+      if (Array.isArray(parsed.block)) {
+        const contents: BlockContent[] = parsed.block.map((item, index) => {
+          if (typeof item === 'object' && item !== null) {
+            const obj = item as Record<string, unknown>
+            if ('textnode' in obj) {
+              return { id: `block-${index}`, type: 'text' as const, content: obj.textnode as string }
+            }
+            if ('image' in obj) {
+              return { id: `block-${index}`, type: 'image' as const, imageUrl: obj.image as string }
+            }
+            if ('video' in obj) {
+              return { id: `block-${index}`, type: 'video' as const, videoUrl: obj.video as string }
+            }
+            if ('audio' in obj) {
+              return { id: `block-${index}`, type: 'audio' as const, audioUrl: obj.audio as string }
+            }
+          }
+          return { id: `block-${index}`, type: 'text' as const, content: String(item) }
+        })
+        return { contents }
+      }
+      return { content: parsed.content as string }
+    default:
+      // 尝试通用解析
+      if ('textnode' in parsed) return { content: parsed.textnode as string }
+      if ('image' in parsed) return { imageUrl: parsed.image as string }
+      if ('video' in parsed) return { videoUrl: parsed.video as string }
+      if ('audio' in parsed) return { audioUrl: parsed.audio as string }
+      return { content: parsed.content as string }
+  }
+}
 
 // 角色对应的System Prompt (通用版)
 const ROLE_PROMPTS: Record<string, string> = {
@@ -55,7 +112,7 @@ export interface ExecutionOptions {
   nodeName?: string           // 节点名称(用于日志)
   sessionId?: string         // 会话ID(用于日志文件)
   onStateChange?: (state: ExecutionState) => void
-  onWriteNode?: (nodeId: string, content: string) => void
+  onWriteNode?: (nodeId: string, data: WriteNodeData) => void
 }
 
 export class AIExecutionEngine {
@@ -106,7 +163,7 @@ export class AIExecutionEngine {
     nodeName: string | undefined,
     sessionId: string | undefined,
     onStateChange?: (state: ExecutionState) => void,
-    onWriteNode?: (nodeId: string, content: string) => void
+    onWriteNode?: (nodeId: string, data: WriteNodeData) => void
   ): Promise<string> {
     if (!nodeId || !nodes || !edges) {
       throw new Error('Node task requires nodeId, nodes and edges')
@@ -174,17 +231,25 @@ export class AIExecutionEngine {
             if (toolCall.function.name === 'write_node' && onWriteNode) {
               const parsedArgs = typeof rawArgs === 'string' ? JSON.parse(rawArgs) : rawArgs as { nodeId: string; content: string }
               if (!result.error) {
-                // Extract content from JSON if wrapped
-                let content = parsedArgs.content
+                // Find target node to determine its type
+                const targetNode = nodes.find(n => n.id === parsedArgs.nodeId)
+                const nodeData = targetNode?.data as unknown as NodeData | undefined
+                const nodeType = nodeData?.type || 'text'
+
+                // Parse content as JSON
+                let writeData: WriteNodeData = { content: parsedArgs.content }
                 try {
-                  const parsed = JSON.parse(content)
-                  if (typeof parsed === 'object' && parsed !== null && 'content' in parsed) {
-                    content = parsed.content as string
+                  const parsed = JSON.parse(parsedArgs.content)
+                  if (typeof parsed === 'object' && parsed !== null) {
+                    writeData = parseWriteNodeData(parsed, nodeType)
                   }
                 } catch {
-                  // Not JSON, use as-is
+                  // Not JSON, use content as-is for text nodes
+                  if (nodeType === 'text' || nodeType === 'script') {
+                    writeData = { content: parsedArgs.content }
+                  }
                 }
-                onWriteNode(parsedArgs.nodeId, content)
+                onWriteNode(parsedArgs.nodeId, writeData)
               }
             }
 

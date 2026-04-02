@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef } from 'react'
 import { useReactFlow } from '@xyflow/react'
-import { aiExecutionEngine, ChatMode, ExecutionOptions } from '../services/AIExecutionEngine'
+import { aiExecutionEngine, ChatMode, ExecutionOptions, WriteNodeData } from '../services/AIExecutionEngine'
 import { useNodeUpdates } from './useNodeUpdates'
 import { useCanvasContext } from '../contexts/CanvasContext'
 import type { ExecutionState } from '../types/ai'
@@ -24,7 +24,7 @@ export function useNodeAI(nodeId: string) {
     userInput: string,
     hiddenNodeIds: Set<string> = new Set(),
     model?: string,
-    onWriteNode?: (nodeId: string, content: string) => void
+    onWriteNode?: (nodeId: string, data: WriteNodeData) => void
   ) => {
     const node = getNode(nodeId)
     if (!node) return
@@ -40,7 +40,7 @@ export function useNodeAI(nodeId: string) {
     contentWrittenViaToolRef.current = false
 
     // Default onWriteNode uses updateContent for the current node
-    const handleWriteNode = onWriteNode || ((targetNodeId: string, content: string) => {
+    const handleWriteNode = onWriteNode || ((targetNodeId: string, data: WriteNodeData) => {
       // Only update if writing to the current node
       if (targetNodeId === nodeId) {
         contentWrittenViaToolRef.current = true
@@ -48,7 +48,7 @@ export function useNodeAI(nodeId: string) {
         setNodes((nds) =>
           nds.map((n) => {
             if (n.id === nodeId) {
-              return { ...n, data: { ...n.data, content } }
+              return { ...n, data: { ...n.data, ...data } }
             }
             return n
           })

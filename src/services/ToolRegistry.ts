@@ -191,16 +191,52 @@ export class ToolRegistry {
     }
 
     const nodeData = node.data as unknown as NodeData
-    const content = getNodeContent(nodeData)
+
+    // 构建结构化输出
+    const result: Record<string, unknown> = {
+      nodeId: node.id,
+      label: nodeData.label,
+      type: nodeData.type
+    }
+
+    switch (nodeData.type) {
+      case 'text':
+      case 'script':
+        result.textnode = nodeData.content || ''
+        break
+      case 'image':
+        result.image = nodeData.imageUrl || ''
+        break
+      case 'video':
+        result.video = nodeData.videoUrl || ''
+        break
+      case 'audio':
+        result.audio = nodeData.audioUrl || ''
+        break
+      case 'block':
+        // block 节点返回数组，每个元素是对应类型的内容
+        result.block = (nodeData.contents || []).map(item => {
+          switch (item.type) {
+            case 'text':
+              return { textnode: item.content || '' }
+            case 'image':
+              return { image: item.imageUrl || '' }
+            case 'video':
+              return { video: item.videoUrl || '' }
+            case 'audio':
+              return { audio: item.audioUrl || '' }
+            default:
+              return { textnode: JSON.stringify(item) }
+          }
+        })
+        break
+      default:
+        result.textnode = getNodeContent(nodeData)
+    }
 
     return {
       name: 'read_node',
-      output: JSON.stringify({
-        nodeId: node.id,
-        label: nodeData.label,
-        type: nodeData.type,
-        content
-      })
+      output: JSON.stringify(result)
     }
   }
 
