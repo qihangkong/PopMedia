@@ -12,7 +12,6 @@ mod db_tests;
 mod commands_tests;
 
 use commands::http::create_http_client;
-use commands::skills::init_default_skills;
 use commands::AppState;
 use db::{get_db_path, init_database};
 use std::sync::Mutex;
@@ -53,12 +52,9 @@ pub fn run() {
                 let app_dir = app_data.join("PopMedia").join("projects");
                 let _ = std::fs::create_dir_all(&app_dir);
 
-                // Create skills directory
+                // Create skills directory (for user skills)
                 let skills_dir = app_data.join("PopMedia").join(".skills");
                 let _ = std::fs::create_dir_all(&skills_dir);
-
-                // Initialize default skills
-                let _ = init_default_skills();
 
                 // Setup logging
                 let log_dir = app_data.join("PopMedia").join("logs");

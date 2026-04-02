@@ -61,6 +61,9 @@
       "icons/icon.icns",
       "icons/icon.ico"
     ],
+    "resources": {
+      "skills/*": "skills/"
+    },
     "windows": {
       "nsis": {
         "installMode": "currentUser"

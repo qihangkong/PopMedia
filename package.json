@@ -4,8 +4,9 @@
   "version": "0.0.1",
   "type": "module",
   "scripts": {
-    "dev": "tauri dev",
+    "dev": "node scripts/copy-skills.js && tauri dev",
     "build": "tauri build",
+    "setup:skills": "node scripts/copy-skills.js",
     "clean:db": "node scripts/clean-db.js",
     "test": "vitest run && cd src-tauri && cargo test && cd ..",
     "test:all": "vitest run && cd src-tauri && cargo test && cd .. && npx playwright test",

@@ -174,7 +174,17 @@ export class AIExecutionEngine {
             if (toolCall.function.name === 'write_node' && onWriteNode) {
               const parsedArgs = typeof rawArgs === 'string' ? JSON.parse(rawArgs) : rawArgs as { nodeId: string; content: string }
               if (!result.error) {
-                onWriteNode(parsedArgs.nodeId, parsedArgs.content)
+                // Extract content from JSON if wrapped
+                let content = parsedArgs.content
+                try {
+                  const parsed = JSON.parse(content)
+                  if (typeof parsed === 'object' && parsed !== null && 'content' in parsed) {
+                    content = parsed.content as string
+                  }
+                } catch {
+                  // Not JSON, use as-is
+                }
+                onWriteNode(parsedArgs.nodeId, content)
               }
             }
 
