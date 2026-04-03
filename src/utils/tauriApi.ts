@@ -101,14 +101,19 @@ export async function getComfyuiWorkflows(comfyuiId: string): Promise<ComfyuiWor
   return await invoke<ComfyuiWorkflow[]>('get_comfyui_workflows', { comfyuiId })
 }
 
-// Save or update a ComfyUI workflow
-export async function saveComfyuiWorkflow(workflow: ComfyuiWorkflow): Promise<ComfyuiWorkflow> {
-  return await invoke<ComfyuiWorkflow>('save_comfyui_workflow', { workflow })
+// Upload and save a ComfyUI workflow (save file to disk and metadata to DB)
+export async function uploadComfyuiWorkflow(comfyuiId: string, name: string, jsonContent: string): Promise<ComfyuiWorkflow> {
+  return await invoke<ComfyuiWorkflow>('upload_comfyui_workflow', { comfyuiId, name, jsonContent })
 }
 
 // Delete a ComfyUI workflow
 export async function deleteComfyuiWorkflow(id: string): Promise<string> {
   return await invoke<string>('delete_comfyui_workflow', { id })
+}
+
+// Load workflow JSON content from file
+export async function loadComfyuiWorkflowFile(filePath: string): Promise<string> {
+  return await invoke<string>('load_comfyui_workflow_file', { filePath })
 }
 
 // Test LLM connection

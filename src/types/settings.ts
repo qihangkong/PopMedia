@@ -51,7 +51,7 @@ export interface ComfyuiWorkflow {
   id: string
   comfyui_id: string
   name: string
-  workflow_data: string
+  file_path: string
 }
 
 export interface TestConnectionResult {

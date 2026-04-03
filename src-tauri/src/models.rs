@@ -106,8 +106,8 @@ pub struct ComfyuiWorkflow {
     pub id: String,
     pub comfyui_id: String,
     pub name: String,
-    /// Workflow JSON content or API endpoint
-    pub workflow_data: String,
+    /// Path to the workflow JSON file
+    pub file_path: String,
 }
 
 #[derive(Debug, Serialize, Deserialize)]

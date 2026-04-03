@@ -137,6 +137,13 @@ pub fn delete_comfyui_config(id: String, state: tauri::State<AppState>) -> Resul
     Ok(format!("ComfyUI config '{}' deleted", id))
 }
 
+/// Get the workflows directory path
+fn get_workflows_dir() -> Result<std::path::PathBuf, String> {
+    let base_dir = dirs::data_local_dir()
+        .ok_or_else(|| "Failed to get local data directory".to_string())?;
+    Ok(base_dir.join("PopMedia").join("workflows"))
+}
+
 /// Get all workflows for a ComfyUI config
 #[tauri::command]
 pub fn get_comfyui_workflows(
@@ -145,7 +152,7 @@ pub fn get_comfyui_workflows(
 ) -> Result<Vec<ComfyuiWorkflow>, String> {
     let conn = state.db.lock().map_err(|e| e.to_string())?;
     let mut stmt = conn
-        .prepare("SELECT id, comfyui_id, name, workflow_data FROM comfyui_workflows WHERE comfyui_id = ?1 ORDER BY name")
+        .prepare("SELECT id, comfyui_id, name, file_path FROM comfyui_workflows WHERE comfyui_id = ?1 ORDER BY name")
         .map_err(|e| e.to_string())?;
 
     let workflows: Vec<ComfyuiWorkflow> = stmt
@@ -154,7 +161,7 @@ pub fn get_comfyui_workflows(
                 id: row.get(0)?,
                 comfyui_id: row.get(1)?,
                 name: row.get(2)?,
-                workflow_data: row.get(3)?,
+                file_path: row.get(3)?,
             })
         })
         .map_err(|e| e.to_string())?
@@ -167,30 +174,76 @@ pub fn get_comfyui_workflows(
     Ok(workflows)
 }
 
-/// Save or update a ComfyUI workflow
+/// Upload and save a ComfyUI workflow (save file to disk and metadata to DB)
 #[tauri::command]
-pub fn save_comfyui_workflow(
-    workflow: ComfyuiWorkflow,
+pub fn upload_comfyui_workflow(
+    comfyui_id: String,
+    name: String,
+    json_content: String,
     state: tauri::State<AppState>,
 ) -> Result<ComfyuiWorkflow, String> {
+    let workflows_dir = get_workflows_dir()?;
+    let workflow_id = uuid::Uuid::new_v4().to_string();
+
+    // Create directory: workflows/{comfyui_id}/
+    let workflow_dir = workflows_dir.join(&comfyui_id);
+    std::fs::create_dir_all(&workflow_dir)
+        .map_err(|e| format!("Failed to create workflow directory: {}", e))?;
+
+    // Save file: workflows/{comfyui_id}/{workflow_id}.json
+    let file_path = workflow_dir.join(format!("{}.json", &workflow_id));
+    std::fs::write(&file_path, &json_content)
+        .map_err(|e| format!("Failed to write workflow file: {}", e))?;
+
+    let file_path_str = file_path.to_string_lossy().to_string();
+
+    // Save metadata to database
     let conn = state.db.lock().map_err(|e| e.to_string())?;
     let now = chrono::Utc::now().to_rfc3339();
 
     conn.execute(
-        "INSERT OR REPLACE INTO comfyui_workflows (id, comfyui_id, name, workflow_data, created_at)
+        "INSERT INTO comfyui_workflows (id, comfyui_id, name, file_path, created_at)
          VALUES (?1, ?2, ?3, ?4, ?5)",
-        params![workflow.id, workflow.comfyui_id, workflow.name, workflow.workflow_data, now],
+        params![workflow_id, comfyui_id, name, file_path_str, now],
     )
     .map_err(|e| e.to_string())?;
 
-    Ok(workflow)
+    Ok(ComfyuiWorkflow {
+        id: workflow_id,
+        comfyui_id,
+        name,
+        file_path: file_path_str,
+    })
 }
 
-/// Delete a ComfyUI workflow
+/// Delete a ComfyUI workflow (delete file and DB record)
 #[tauri::command]
 pub fn delete_comfyui_workflow(id: String, state: tauri::State<AppState>) -> Result<String, String> {
     let conn = state.db.lock().map_err(|e| e.to_string())?;
+
+    // First get the file_path to delete the file
+    let file_path: String = conn.query_row(
+        "SELECT file_path FROM comfyui_workflows WHERE id = ?1",
+        [&id],
+        |row| row.get(0),
+    ).map_err(|e| e.to_string())?;
+
+    // Delete the file
+    if std::path::Path::new(&file_path).exists() {
+        std::fs::remove_file(&file_path)
+            .map_err(|e| format!("Failed to delete workflow file: {}", e))?;
+    }
+
+    // Delete from database
     conn.execute("DELETE FROM comfyui_workflows WHERE id = ?1", params![id])
         .map_err(|e| e.to_string())?;
+
     Ok(format!("Workflow '{}' deleted", id))
+}
+
+/// Load workflow JSON content from file
+#[tauri::command]
+pub fn load_comfyui_workflow_file(file_path: String) -> Result<String, String> {
+    std::fs::read_to_string(&file_path)
+        .map_err(|e| format!("Failed to read workflow file: {}", e))
 }

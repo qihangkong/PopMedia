@@ -15,7 +15,7 @@ import {
   saveComfyuiConfig,
   deleteComfyuiConfig,
   getComfyuiWorkflows,
-  saveComfyuiWorkflow,
+  uploadComfyuiWorkflow,
   deleteComfyuiWorkflow,
   testLlmConnection,
   testComfyuiConnection,
@@ -194,14 +194,8 @@ export default function Settings() {
       // Read the file content
       const content = await readTextFile(filePath)
 
-      const newWorkflow: ComfyuiWorkflow = {
-        id: crypto.randomUUID(),
-        comfyui_id: comfyuiId,
-        name: fileName,
-        workflow_data: content,
-      }
-
-      await saveComfyuiWorkflow(newWorkflow)
+      // Upload workflow - backend saves file to disk and returns metadata
+      const newWorkflow = await uploadComfyuiWorkflow(comfyuiId, fileName, content)
       setWorkflows(prev => {
         const newMap = new Map(prev)
         const existing = newMap.get(comfyuiId) || []
@@ -210,8 +204,8 @@ export default function Settings() {
       })
       notifySuccess('Workflow 上传成功')
     } catch (error) {
-      console.error('Failed to read workflow file:', error)
-      notifyError('读取 Workflow 文件失败')
+      console.error('Failed to upload workflow file:', error)
+      notifyError('上传 Workflow 文件失败')
     }
   }
 
