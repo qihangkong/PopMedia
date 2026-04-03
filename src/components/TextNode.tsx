@@ -1,9 +1,10 @@
-import { useRef, memo } from 'react'
+import { memo, useCallback } from 'react'
 import { Handle, Position } from '@xyflow/react'
 import { NodeHeader } from './NodeHeader'
 import { ResizeHandle } from './ResizeHandle'
 import { NodeAIInput } from './NodeAIInput'
 import { useNodeUpdates } from '../hooks/useNodeUpdates'
+import { useCanvasContext } from '../contexts/CanvasContext'
 import { NODE_TYPE_MAP } from '../nodeTypes'
 import { HANDLE_SIZE } from '../constants'
 
@@ -14,13 +15,13 @@ interface TextNodeProps {
 }
 
 export const TextNode = memo(function TextNode({ data, selected, id }: TextNodeProps) {
-  const { updateContent, onResize } = useNodeUpdates(id)
+  const { onResize } = useNodeUpdates(id)
+  const { onOpenTextNodeEdit } = useCanvasContext()
   const meta = NODE_TYPE_MAP[data.type || 'text']
-  const textareaRef = useRef<HTMLTextAreaElement>(null)
 
-  const handleContentBlur = (e: React.FocusEvent<HTMLTextAreaElement>) => {
-    updateContent(e.target.value)
-  }
+  const handleOpenEdit = useCallback(() => {
+    onOpenTextNodeEdit(id, data.label || meta?.label || '文本节点', data.content || '')
+  }, [id, data.label, data.content, meta, onOpenTextNodeEdit])
 
   return (
     <div
@@ -28,16 +29,11 @@ export const TextNode = memo(function TextNode({ data, selected, id }: TextNodeP
       data-id={id}
       style={{ width: '100%', height: '100%' }}
     >
-      <NodeHeader id={id} type="text" label={data.label} />
+      <NodeHeader id={id} type="text" label={data.label} onOpenEdit={handleOpenEdit} />
       <div className="node-body">
-        <textarea
-          ref={textareaRef}
-          className="text-node-content"
-          defaultValue={data.content || ''}
-          placeholder={meta?.placeholderText}
-          onBlur={handleContentBlur}
-          onPointerDown={(e) => e.stopPropagation()}
-        />
+        <div className="text-node-content">
+          {data.content || meta?.placeholderText}
+        </div>
       </div>
       <Handle
         type="source"

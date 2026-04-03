@@ -5,7 +5,7 @@ import HeaderBar from '../components/HeaderBar'
 import Sidebar from '../components/Sidebar'
 import ControlBar from '../components/ControlBar'
 import ChatDrawer from '../components/ChatDrawer'
-import { ImagePreviewModal, VideoPreviewModal } from '../components/CanvasModals'
+import { ImagePreviewModal, VideoPreviewModal, TextNodeEditModal } from '../components/CanvasModals'
 import { AddNodeMenu } from '../components/AddNodeMenu'
 import { useCanvasContext } from '../contexts/CanvasContext'
 import { useNotification } from '../contexts/NotificationContext'
@@ -112,6 +112,8 @@ export default function Canvas() {
     onPreviewImage,
     previewVideo,
     onPreviewVideo,
+    textNodeEdit,
+    onCloseTextNodeEdit,
     onCloseAllMenus,
   } = useCanvasContext()
 
@@ -267,6 +269,14 @@ export default function Canvas() {
 
       <ImagePreviewModal imageUrl={previewImage} onClose={() => onPreviewImage('')} />
       <VideoPreviewModal videoUrl={previewVideo} onClose={() => onPreviewVideo('')} />
+      {textNodeEdit && (
+        <TextNodeEditModal
+          nodeId={textNodeEdit.nodeId}
+          initialLabel={textNodeEdit.label}
+          initialContent={textNodeEdit.content}
+          onClose={onCloseTextNodeEdit}
+        />
+      )}
 
       {addNodeMenu && (
         <AddNodeMenu

@@ -359,7 +359,20 @@ body {
   text-overflow: initial;
 }
 
+.node-label {
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1;
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: default;
+}
+
 .text-label-input  { color: #818cf8; }
+.text-label { color: #818cf8; }
 .image-label-input { color: #34d399; }
 .video-label-input { color: #f472b6; }
 .audio-label-input { color: #fbbf24; }
@@ -397,23 +410,24 @@ body {
   }
 }
 
-/* Text node editable content */
+/* Text node display content */
 .text-node-content {
   width: 100%;
   height: 100%;
-  background: transparent;
-  border: none;
-  outline: none;
-  resize: none;
   color: rgba(255, 255, 255, 0.85);
   font-size: 12px;
   font-family: inherit;
   line-height: 1.5;
   padding: 0;
   box-sizing: border-box;
+  cursor: default;
+  white-space: pre-wrap;
+  overflow-y: auto;
+  word-break: break-word;
 }
 
-.text-node-content::placeholder {
+.text-node-content:empty::before {
+  content: attr(data-placeholder);
   color: rgba(255, 255, 255, 0.3);
 }
 
@@ -2579,6 +2593,36 @@ body {
   min-width: 320px;
   max-width: 400px;
   box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+}
+
+.text-node-edit-modal {
+  width: 80vw;
+  max-width: 900px;
+}
+
+.text-node-edit-content {
+  width: 100%;
+  min-height: 400px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 8px;
+  outline: none;
+  resize: vertical;
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 13px;
+  font-family: inherit;
+  line-height: 1.5;
+  padding: 12px;
+  box-sizing: border-box;
+  transition: border-color 0.15s;
+}
+
+.text-node-edit-content:focus {
+  border-color: #6366f1;
+}
+
+.text-node-edit-content::placeholder {
+  color: rgba(255, 255, 255, 0.3);
 }
 
 .confirm-modal-title {

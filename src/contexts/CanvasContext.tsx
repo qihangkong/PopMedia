@@ -1,5 +1,11 @@
 import { createContext, useContext, useState, useCallback, ReactNode } from 'react'
 
+interface TextNodeEditData {
+  nodeId: string
+  label: string
+  content: string
+}
+
 interface CanvasContextType {
   // Canvas name for AI dialogue logging
   canvasName: string
@@ -16,6 +22,10 @@ interface CanvasContextType {
   // 视频预览
   previewVideo: string | null
   onPreviewVideo: (videoUrl: string) => void
+  // 文本节点编辑弹窗
+  textNodeEdit: TextNodeEditData | null
+  onOpenTextNodeEdit: (nodeId: string, label: string, content: string) => void
+  onCloseTextNodeEdit: () => void
   // 关闭所有菜单
   onCloseAllMenus: () => void
 }
@@ -32,6 +42,7 @@ export function CanvasProvider({ children }: { children: ReactNode }) {
 
   const [previewImage, setPreviewImage] = useState<string | null>(null)
   const [previewVideo, setPreviewVideo] = useState<string | null>(null)
+  const [textNodeEdit, setTextNodeEdit] = useState<TextNodeEditData | null>(null)
   const [canvasName, setCanvasName] = useState<string>('未命名的画布')
 
   const onNodeContextMenu = useCallback((nodeId: string, nodeType: string, x: number, y: number) => {
@@ -50,10 +61,19 @@ export function CanvasProvider({ children }: { children: ReactNode }) {
     setPreviewVideo(videoUrl)
   }, [])
 
+  const onOpenTextNodeEdit = useCallback((nodeId: string, label: string, content: string) => {
+    setTextNodeEdit({ nodeId, label, content })
+  }, [])
+
+  const onCloseTextNodeEdit = useCallback(() => {
+    setTextNodeEdit(null)
+  }, [])
+
   const onCloseAllMenus = useCallback(() => {
     setContextMenu(null)
     setPreviewImage(null)
     setPreviewVideo(null)
+    setTextNodeEdit(null)
   }, [])
 
   // 从后端加载 canvas name
@@ -80,6 +100,9 @@ export function CanvasProvider({ children }: { children: ReactNode }) {
         onPreviewImage,
         previewVideo,
         onPreviewVideo,
+        textNodeEdit,
+        onOpenTextNodeEdit,
+        onCloseTextNodeEdit,
         onCloseAllMenus,
       }}
     >

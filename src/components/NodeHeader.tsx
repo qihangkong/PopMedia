@@ -1,6 +1,6 @@
-import { useState, useRef, useCallback } from 'react'
+import { useCallback } from 'react'
 import { useReactFlow, Handle, Position } from '@xyflow/react'
-import { NodeTypeIcon, EditIcon, CheckIcon, CloseIcon } from '../icons'
+import { NodeTypeIcon, EditIcon, CloseIcon } from '../icons'
 import { NODE_TYPE_MAP } from '../nodeTypes'
 import { HANDLE_SIZE } from '../constants'
 
@@ -9,66 +9,36 @@ interface NodeHeaderProps {
   type: string
   label: string
   onLabelChange?: (newLabel: string) => void
+  onOpenEdit?: () => void
 }
 
-export function NodeHeader({ id, type, label, onLabelChange }: NodeHeaderProps) {
+export function NodeHeader({ id, type, label, onLabelChange, onOpenEdit }: NodeHeaderProps) {
   const { setNodes } = useReactFlow()
-  const [isEditingLabel, setIsEditingLabel] = useState(false)
-  const labelInputRef = useRef<HTMLInputElement>(null)
   const meta = NODE_TYPE_MAP[type]
-
-  const handleLabelBlur = useCallback(
-    (e: React.FocusEvent<HTMLInputElement>) => {
-      const newLabel = e.target.value
-      setIsEditingLabel(false)
-      if (newLabel === label) return
-      if (onLabelChange) {
-        onLabelChange(newLabel)
-      } else {
-        setNodes((nds) =>
-          nds.map((node) => {
-            if (node.id === id) {
-              return { ...node, data: { ...node.data, label: newLabel } }
-            }
-            return node
-          })
-        )
-      }
-    },
-    [setNodes, id, label, onLabelChange]
-  )
 
   const handleDelete = useCallback(() => {
     setNodes((nds) => nds.filter((n) => n.id !== id))
   }, [setNodes, id])
 
+  const handleEditClick = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation()
+    if (onOpenEdit) {
+      onOpenEdit()
+    }
+  }, [onOpenEdit])
+
   return (
     <div className={`node-header ${type}-header`}>
       <NodeTypeIcon type={type} />
-      <input
-        ref={labelInputRef}
-        className={`node-label-input ${type}-label-input`}
-        defaultValue={label || meta?.label}
-        readOnly={!isEditingLabel}
-        onBlur={handleLabelBlur}
-        onClick={(e) => {
-          if (isEditingLabel) e.stopPropagation()
-        }}
-      />
+      <span className={`node-label ${type}-label`}>
+        {label || meta?.label}
+      </span>
       <button
         className="node-edit-btn"
-        title={isEditingLabel ? '完成编辑' : '编辑名称'}
-        onClick={(e) => {
-          e.stopPropagation()
-          if (isEditingLabel) {
-            labelInputRef.current?.blur()
-          } else {
-            setIsEditingLabel(true)
-            setTimeout(() => labelInputRef.current?.select(), 0)
-          }
-        }}
+        title="编辑节点"
+        onClick={handleEditClick}
       >
-        {isEditingLabel ? <CheckIcon /> : <EditIcon />}
+        <EditIcon />
       </button>
       <button
         className="node-delete-btn"

@@ -1,3 +1,6 @@
+import { useState, useCallback } from 'react'
+import { useReactFlow } from '@xyflow/react'
+
 interface NodeContextMenuProps {
   nodeId: string
   nodeType: string
@@ -92,6 +95,77 @@ export function VideoPreviewModal({ videoUrl, onClose }: VideoPreviewModalProps)
         autoPlay
         onClick={(e) => e.stopPropagation()}
       />
+    </div>
+  )
+}
+
+interface TextNodeEditModalProps {
+  nodeId: string
+  initialLabel: string
+  initialContent: string
+  onClose: () => void
+}
+
+export function TextNodeEditModal({ nodeId, initialLabel, initialContent, onClose }: TextNodeEditModalProps) {
+  const { setNodes } = useReactFlow()
+  const [label, setLabel] = useState(initialLabel)
+  const [content, setContent] = useState(initialContent)
+
+  const handleSave = useCallback(() => {
+    setNodes((nds) =>
+      nds.map((node) => {
+        if (node.id === nodeId) {
+          return { ...node, data: { ...node.data, label, content } }
+        }
+        return node
+      })
+    )
+    onClose()
+  }, [setNodes, nodeId, label, content, onClose])
+
+  return (
+    <div className="confirm-modal-overlay" onClick={onClose}>
+      <div className="confirm-modal text-node-edit-modal" onClick={(e) => e.stopPropagation()}>
+        <h3 className="confirm-modal-title">编辑文本节点</h3>
+
+        <div className="field-group" style={{ marginBottom: '16px' }}>
+          <label>节点名称</label>
+          <div className="input-wrapper">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M12 20h9"></path>
+              <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"></path>
+            </svg>
+            <input
+              type="text"
+              className="config-input"
+              placeholder="输入节点名称"
+              value={label}
+              onChange={(e) => setLabel(e.target.value)}
+              autoFocus
+            />
+          </div>
+        </div>
+
+        <div className="field-group" style={{ marginBottom: '16px' }}>
+          <label>文本内容</label>
+          <textarea
+            className="text-node-edit-content"
+            placeholder="输入文本内容"
+            value={content}
+            onChange={(e) => setContent(e.target.value)}
+            rows={6}
+          />
+        </div>
+
+        <div className="confirm-modal-actions">
+          <button className="confirm-modal-btn cancel" onClick={onClose}>
+            取消
+          </button>
+          <button className="confirm-modal-btn confirm" onClick={handleSave}>
+            保存
+          </button>
+        </div>
+      </div>
     </div>
   )
 }
