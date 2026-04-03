@@ -6,6 +6,7 @@ const MIGRATIONS: &[(&str, &str)] = &[
     ("001_initial", include_str!("../migrations/001_initial.sql")),
     ("002_canvas_preview", include_str!("../migrations/002_canvas_preview.sql")),
     ("003_llm_provider_type", include_str!("../migrations/003_llm_provider_type.sql")),
+    ("004_project_details", include_str!("../migrations/004_project_details.sql")),
 ];
 
 pub fn get_db_path() -> PathBuf {

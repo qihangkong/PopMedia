@@ -71,6 +71,9 @@ export interface ProjectInfoData {
   id: string
   name: string
   thumbnail: string | null
+  description: string | null
+  video_ratio: string | null
+  video_style: string | null
   created_at: string
   updated_at: string
 }

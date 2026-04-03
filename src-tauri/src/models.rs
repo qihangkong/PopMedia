@@ -138,6 +138,9 @@ pub struct ProjectInfoData {
     pub id: String,
     pub name: String,
     pub thumbnail: Option<String>,
+    pub description: Option<String>,
+    pub video_ratio: Option<String>,
+    pub video_style: Option<String>,
     pub created_at: String,
     pub updated_at: String,
 }

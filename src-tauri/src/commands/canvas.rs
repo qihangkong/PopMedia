@@ -25,7 +25,7 @@ pub fn get_projects(state: tauri::State<AppState>) -> Result<Vec<ProjectInfoData
     let conn = state.db.lock().map_err(|e| e.to_string())?;
     let mut stmt = conn
         .prepare(
-            "SELECT id, name, thumbnail, created_at, updated_at FROM projects ORDER BY updated_at DESC",
+            "SELECT id, name, thumbnail, description, video_ratio, video_style, created_at, updated_at FROM projects ORDER BY updated_at DESC",
         )
         .map_err(|e| e.to_string())?;
 
@@ -35,8 +35,11 @@ pub fn get_projects(state: tauri::State<AppState>) -> Result<Vec<ProjectInfoData
                 id: row.get(0)?,
                 name: row.get(1)?,
                 thumbnail: row.get(2)?,
-                created_at: row.get(3)?,
-                updated_at: row.get(4)?,
+                description: row.get(3)?,
+                video_ratio: row.get(4)?,
+                video_style: row.get(5)?,
+                created_at: row.get(6)?,
+                updated_at: row.get(7)?,
             })
         })
         .map_err(|e| e.to_string())?
@@ -58,9 +61,18 @@ pub fn save_project_meta(
     let conn = state.db.lock().map_err(|e| e.to_string())?;
 
     conn.execute(
-        "INSERT OR REPLACE INTO projects (id, name, thumbnail, created_at, updated_at)
-         VALUES (?1, ?2, ?3, ?4, ?5)",
-        params![project.id, project.name, project.thumbnail, project.created_at, project.updated_at],
+        "INSERT OR REPLACE INTO projects (id, name, thumbnail, description, video_ratio, video_style, created_at, updated_at)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
+        params![
+            project.id,
+            project.name,
+            project.thumbnail,
+            project.description,
+            project.video_ratio,
+            project.video_style,
+            project.created_at,
+            project.updated_at
+        ],
     )
     .map_err(|e| e.to_string())?;
 
