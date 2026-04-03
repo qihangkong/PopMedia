@@ -100,8 +100,8 @@ export async function testLlmConnection(config: LlmConfig): Promise<TestConnecti
 }
 
 // Test ComfyUI connection
-export async function testComfyuiConnection(config: ComfyuiConfig): Promise<string> {
-  return await invoke<string>('test_comfyui_connection', { config })
+export async function testComfyuiConnection(config: ComfyuiConfig): Promise<TestConnectionResult> {
+  return await invoke<TestConnectionResult>('test_comfyui_connection', { config })
 }
 
 // ==================== Projects API ====================

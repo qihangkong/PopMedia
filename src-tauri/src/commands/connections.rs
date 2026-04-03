@@ -2,6 +2,7 @@ use crate::commands::http::extract_content_from_response;
 use crate::commands::http::extract_tool_calls_from_response;
 use crate::commands::AppState;
 use crate::models::{ComfyuiConfig, LlmConfig, LlmProviderType, TestConnectionResult};
+use futures_util::stream::StreamExt;
 
 /// Test LLM API connection
 #[tauri::command]
@@ -405,33 +406,146 @@ fn extract_content_by_provider(provider: &LlmProviderType, response: &serde_json
     }
 }
 
-/// Test ComfyUI connection
+/// Test ComfyUI connection - multi-step test
 #[tauri::command]
 pub async fn test_comfyui_connection(
     config: ComfyuiConfig,
     state: tauri::State<'_, AppState>,
-) -> Result<String, String> {
+) -> Result<TestConnectionResult, String> {
+    let mut logs = Vec::new();
+    let mut log = |msg: &str| {
+        log::info!("{}", msg);
+        logs.push(msg.to_string());
+    };
+
+    log(&format!("开始测试 ComfyUI 连接: {}", config.name));
+
+    // ========== Step 1: Config Validation ==========
+    log("========== Step 1: 配置校验 ==========");
+    log(&format!("Host: {}", config.host));
+    log(&format!("Port: {}", config.port));
+
     if config.host.is_empty() {
-        return Err("Host is required".to_string());
+        log("Host 不能为空");
+        return Ok(TestConnectionResult {
+            logs,
+            success: false,
+            message: "Host 不能为空".to_string(),
+            tool_call_support: None,
+        });
     }
 
-    let url = format!("http://{}:{}/system_stats", config.host, config.port);
+    if config.port.is_empty() {
+        log("Port 不能为空");
+        return Ok(TestConnectionResult {
+            logs,
+            success: false,
+            message: "Port 不能为空".to_string(),
+            tool_call_support: None,
+        });
+    }
+
+    log("配置校验通过");
+
+    // ========== Step 2: Test object_info Interface ==========
+    log("========== Step 2: 测试 object_info 接口 ==========");
+    let object_info_url = format!("http://{}:{}/object_info", config.host, config.port);
+    log(&format!("请求 URL: {}", object_info_url));
 
     let response = state.http_client
-        .get(&url)
-        .timeout(std::time::Duration::from_secs(10))
+        .get(&object_info_url)
+        .timeout(std::time::Duration::from_secs(30))
         .send()
         .await
-        .map_err(|e| format!("Connection failed: {}", e))?;
+        .map_err(|e| {
+            log(&format!("HTTP 请求失败: {}", e));
+            format!("HTTP 请求失败: {}", e)
+        })?;
 
-    if response.status().is_success() {
-        Ok("Connection successful!".to_string())
-    } else {
-        let status = response.status();
+    let status = response.status();
+    log(&format!("收到响应, 状态码: {}", status));
+
+    if !status.is_success() {
         let body = response.text().await.map_err(|e| {
-            log::error!("读取响应体失败: {}", e);
+            log(&format!("读取响应体失败: {}", e));
             format!("读取响应体失败: {}", e)
         })?;
-        Err(format!("Connection failed: {} - {}", status, body))
+        log(&format!("object_info 接口错误, 状态码: {}, body: {}", status, body));
+        return Ok(TestConnectionResult {
+            logs,
+            success: false,
+            message: format!("object_info 接口错误 ({}): {}", status, body),
+            tool_call_support: None,
+        });
+    }
+
+    // Try to parse as JSON to verify it's valid
+    let body = response.text().await.map_err(|e| {
+        log(&format!("读取响应体失败: {}", e));
+        format!("读取响应体失败: {}", e)
+    })?;
+
+    match serde_json::from_str::<serde_json::Value>(&body) {
+        Ok(json) => {
+            let keys: usize = json.as_object().map(|m| m.keys().len()).unwrap_or(0);
+            log(&format!("object_info 返回有效 JSON, 包含 {} 个节点类型", keys));
+        }
+        Err(e) => {
+            log(&format!("object_info 返回无效 JSON: {}", e));
+            return Ok(TestConnectionResult {
+                logs,
+                success: false,
+                message: format!("object_info 返回无效 JSON: {}", e),
+                tool_call_support: None,
+            });
+        }
+    }
+
+    log("object_info 接口测试通过");
+
+    // ========== Step 3: Test Websocket Connection ==========
+    log("========== Step 3: 测试 WebSocket 连接 ==========");
+    let ws_url = format!("ws://{}:{}/ws", config.host, config.port);
+    log(&format!("连接 URL: {}", ws_url));
+
+    // Create a timeout for websocket connection
+    let connect_result = tokio::time::timeout(
+        std::time::Duration::from_secs(10),
+        tokio_tungstenite::connect_async(&ws_url)
+    ).await;
+
+    match connect_result {
+        Ok(Ok((ws_stream, _))) => {
+            log("WebSocket 连接成功!");
+            // Close the connection immediately after successful connect
+            let (write, _) = ws_stream.split();
+            drop(write);
+            log("WebSocket 连接关闭");
+            log("所有测试通过! ComfyUI 连接正常");
+            Ok(TestConnectionResult {
+                logs,
+                success: true,
+                message: "连接成功! object_info 和 WebSocket 均正常".to_string(),
+                tool_call_support: None,
+            })
+        }
+        Ok(Err(e)) => {
+            log(&format!("WebSocket 连接失败: {}", e));
+            Ok(TestConnectionResult {
+                logs,
+                success: false,
+                message: format!("WebSocket 连接失败: {}", e),
+                tool_call_support: None,
+            })
+        }
+        Err(_) => {
+            log("WebSocket 连接超时 (10秒)");
+            Ok(TestConnectionResult {
+                logs,
+                success: false,
+                message: "WebSocket 连接超时".to_string(),
+                tool_call_support: None,
+            })
+        }
     }
 }

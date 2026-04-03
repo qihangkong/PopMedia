@@ -48,7 +48,7 @@ interface ComfyuiConfigWithStatus extends ComfyuiConfig {
   connectionMessage?: string
 }
 
-type TabType = 'api' | 'skills'
+type TabType = 'api' | 'comfyui' | 'skills'
 
 export default function Settings() {
   const { error: notifyError, success: notifySuccess } = useNotification()
@@ -268,11 +268,11 @@ export default function Settings() {
         const result = await testComfyuiConnection(config)
         setTestLogModal(prev => ({
           ...prev,
-          logs: [...prev.logs, `连接成功!`, `响应: ${result}`],
-          status: 'success'
+          logs: result.logs,
+          status: result.success ? 'success' : 'failed'
         }))
         setComfyuiConfigs(prev => prev.map(c =>
-          c.id === id ? { ...c, connectionStatus: 'success' as ConnectionStatus, connectionMessage: result } : c
+          c.id === id ? { ...c, connectionStatus: result.success ? 'success' as ConnectionStatus : 'failed' as ConnectionStatus, connectionMessage: result.message } : c
         ))
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : String(error)
@@ -351,6 +351,13 @@ description: ${name}
             API 设置
           </button>
           <button
+            className={`settings-tab ${activeTab === 'comfyui' ? 'active' : ''}`}
+            onClick={() => setActiveTab('comfyui')}
+          >
+            <ServerIcon />
+            ComfyUI 设置
+          </button>
+          <button
             className={`settings-tab ${activeTab === 'skills' ? 'active' : ''}`}
             onClick={() => setActiveTab('skills')}
           >
@@ -362,7 +369,7 @@ description: ${name}
         <div className="settings-content">
           {activeTab === 'api' && (
             <>
-              {/* Add buttons */}
+              {/* Add LLM button */}
               <div className="settings-buttons">
                 <button className="settings-add-btn" onClick={handleAddLLM}>
                   <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -370,13 +377,6 @@ description: ${name}
                     <path d="M12 5v14"></path>
                   </svg>
                   添加大语言模型
-                </button>
-                <button className="settings-add-btn" onClick={handleAddComfyUI}>
-                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M5 12h14"></path>
-                    <path d="M12 5v14"></path>
-                  </svg>
-                  添加ComfyUI配置
                 </button>
               </div>
 
@@ -527,6 +527,28 @@ description: ${name}
                 </div>
               )}
 
+              {/* Empty state */}
+              {llmConfigs.length === 0 && (
+                <div className="settings-empty">
+                  <p>点击上方按钮添加配置</p>
+                </div>
+              )}
+            </>
+          )}
+
+          {activeTab === 'comfyui' && (
+            <>
+              {/* Add ComfyUI button */}
+              <div className="settings-buttons">
+                <button className="settings-add-btn" onClick={handleAddComfyUI}>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M5 12h14"></path>
+                    <path d="M12 5v14"></path>
+                  </svg>
+                  添加ComfyUI配置
+                </button>
+              </div>
+
               {/* ComfyUI Section */}
               {comfyuiConfigs.length > 0 && (
                 <div className="settings-section-group">
@@ -610,7 +632,7 @@ description: ${name}
               )}
 
               {/* Empty state */}
-              {llmConfigs.length === 0 && comfyuiConfigs.length === 0 && (
+              {comfyuiConfigs.length === 0 && (
                 <div className="settings-empty">
                   <p>点击上方按钮添加配置</p>
                 </div>
