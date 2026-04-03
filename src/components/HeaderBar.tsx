@@ -5,39 +5,14 @@ import { useClickOutside } from '../hooks/useClickOutside'
 interface HeaderBarProps {
   canvasName?: string
   onCanvasNameChange?: (name: string) => void
+  onOpenSettings?: () => void
 }
 
-export default function HeaderBar({ canvasName = '', onCanvasNameChange }: HeaderBarProps) {
+export default function HeaderBar({ canvasName = '', onOpenSettings }: HeaderBarProps) {
   const navigate = useNavigate()
   const location = useLocation()
   const [showBrandMenu, setShowBrandMenu] = useState(false)
-  const [localCanvasName, setLocalCanvasName] = useState(canvasName)
   const brandRef = useRef<HTMLDivElement>(null)
-  const canvasNameInputRef = useRef<HTMLInputElement>(null)
-  const measureRef = useRef<HTMLSpanElement>(null)
-
-  useEffect(() => {
-    setLocalCanvasName(canvasName)
-  }, [canvasName])
-
-  const measureTextWidth = (text: string) => {
-    if (measureRef.current) {
-      measureRef.current.textContent = text || '未命名的画布'
-      return measureRef.current.offsetWidth + 10
-    }
-    return 100
-  }
-
-  const adjustInputWidth = (text: string) => {
-    if (canvasNameInputRef.current) {
-      const width = measureTextWidth(text)
-      canvasNameInputRef.current.style.width = `${width}px`
-    }
-  }
-
-  useEffect(() => {
-    adjustInputWidth(localCanvasName)
-  }, [localCanvasName])
 
   // 点击外部关闭品牌菜单
   const handleCloseBrandMenu = useCallback(() => setShowBrandMenu(false), [])
@@ -100,30 +75,17 @@ export default function HeaderBar({ canvasName = '', onCanvasNameChange }: Heade
         </button>
         <span className="canvas-header-sep">|</span>
         {location.pathname === '/canvas' ? (
-          <>
-            <input
-              ref={canvasNameInputRef}
-              type="text"
-              className="canvas-header-canvas-name"
-              value={localCanvasName}
-              onChange={(e) => {
-                setLocalCanvasName(e.target.value)
-                adjustInputWidth(e.target.value)
-              }}
-              onBlur={() => onCanvasNameChange?.(localCanvasName)}
-              onClick={(e) => e.stopPropagation()}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  e.currentTarget.blur()
-                }
-              }}
-            />
-            <span
-              ref={measureRef}
-              className="canvas-header-canvas-name"
-              style={{ position: 'absolute', visibility: 'hidden', pointerEvents: 'none' }}
-            />
-          </>
+          <div className="canvas-name-with-settings">
+            <span className="canvas-header-canvas-name">{canvasName || '未命名的画布'}</span>
+            {onOpenSettings && (
+              <button className="canvas-settings-icon" onClick={onOpenSettings}>
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"></path>
+                  <circle cx="12" cy="12" r="3"></circle>
+                </svg>
+              </button>
+            )}
+          </div>
         ) : (
           <span className="canvas-header-canvas-name">
             {menuItems.find(item => item.path === location.pathname)?.label || ''}

@@ -2262,6 +2262,49 @@ body {
   color: rgba(255, 255, 255, 0.3);
 }
 
+/* Canvas Settings Icon */
+.canvas-settings-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  background: transparent;
+  border: none;
+  color: rgba(255, 255, 255, 0.5);
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+}
+
+.canvas-settings-icon:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.canvas-name-with-settings {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* Canvas Settings Modal */
+.canvas-settings-modal {
+  min-width: 400px;
+}
+
+.canvas-settings-modal select {
+  -webkit-appearance: none;
+  appearance: none;
+  background: transparent;
+}
+
+.canvas-settings-modal select option {
+  background: #2a2a2a;
+  color: #fff;
+}
+
 .section-all-btn {
   display: flex;
   align-items: center;

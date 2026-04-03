@@ -8,6 +8,7 @@ import ChatDrawer from '../components/ChatDrawer'
 import { ImagePreviewModal, VideoPreviewModal } from '../components/CanvasModals'
 import { AddNodeMenu } from '../components/AddNodeMenu'
 import { useCanvasContext } from '../contexts/CanvasContext'
+import { useNotification } from '../contexts/NotificationContext'
 import { DEFAULT_ZOOM } from '../constants'
 import {
   useCanvasId,
@@ -16,6 +17,7 @@ import {
 } from '../hooks/useCanvas'
 import { useConnectionHandler } from '../hooks/canvas/useConnectionHandler'
 import { CanvasRenderer } from '../components/canvas/CanvasRenderer'
+import { getCanvasById, saveCanvasMeta, getProjects, CanvasInfo, ProjectInfoData } from '../utils/tauriApi'
 
 interface AddNodeMenuState {
   x: number
@@ -31,6 +33,14 @@ export default function Canvas() {
 
   const [addNodeMenu, setAddNodeMenu] = useState<AddNodeMenuState | null>(null)
 
+  // Canvas settings modal
+  const [showSettings, setShowSettings] = useState(false)
+  const [settingsForm, setSettingsForm] = useState({ name: '', projectId: '' })
+  const [projects, setProjects] = useState<ProjectInfoData[]>([])
+  const [canvasInfo, setCanvasInfo] = useState<CanvasInfo | null>(null)
+  const [saving, setSaving] = useState(false)
+  const { success: showSuccess, error: showError } = useNotification()
+
   const { zoomIn, zoomOut, getViewport, setViewport } = useReactFlow()
   const {
     nodes,
@@ -45,6 +55,53 @@ export default function Canvas() {
     saveCanvas,
   } = useCanvasData()
   const { canvasId, isLoading, isInitializedRef } = useCanvasId(loadCanvas)
+
+  // Load settings data
+  const loadSettingsData = useCallback(async () => {
+    if (!canvasId) return
+    try {
+      const [canvas, projectList] = await Promise.all([
+        getCanvasById(canvasId),
+        getProjects(),
+      ])
+      setCanvasInfo(canvas)
+      setProjects(projectList)
+      setSettingsForm({
+        name: canvas.name,
+        projectId: canvas.project_id || '',
+      })
+    } catch (err) {
+      console.error('[Canvas] Failed to load settings:', err)
+    }
+  }, [canvasId])
+
+  const openSettings = useCallback(() => {
+    loadSettingsData()
+    setShowSettings(true)
+  }, [loadSettingsData])
+
+  const handleSaveSettings = async () => {
+    if (!canvasInfo || !settingsForm.name.trim() || saving) return
+    try {
+      setSaving(true)
+      const updated: CanvasInfo = {
+        ...canvasInfo,
+        name: settingsForm.name.trim(),
+        project_id: settingsForm.projectId || null,
+        updated_at: new Date().toISOString(),
+      }
+      await saveCanvasMeta(updated)
+      setCanvasInfo(updated)
+      setCanvasName(settingsForm.name.trim())
+      setShowSettings(false)
+      showSuccess('画布设置已保存')
+    } catch (err) {
+      console.error('[Canvas] Failed to save settings:', err)
+      showError('保存失败')
+    } finally {
+      setSaving(false)
+    }
+  }
 
   const {
     canvasName,
@@ -112,7 +169,72 @@ export default function Canvas() {
           <span>加载中...</span>
         </div>
       )}
-      <HeaderBar canvasName={canvasName} onCanvasNameChange={setCanvasName} />
+      <HeaderBar canvasName={canvasName} onCanvasNameChange={setCanvasName} onOpenSettings={openSettings} />
+
+      {/* Canvas Settings Modal */}
+      {showSettings && (
+        <div className="confirm-modal-overlay" onClick={() => setShowSettings(false)}>
+          <div className="confirm-modal canvas-settings-modal" onClick={(e) => e.stopPropagation()}>
+            <h3 className="confirm-modal-title">画布设置</h3>
+
+            <div className="field-group" style={{ marginBottom: '16px' }}>
+              <label>画布名称</label>
+              <div className="input-wrapper">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <rect width="18" height="18" x="3" y="3" rx="2"></rect>
+                  <path d="M3 9h18"></path>
+                  <path d="M9 21V9"></path>
+                </svg>
+                <input
+                  type="text"
+                  className="config-input"
+                  placeholder="输入画布名称"
+                  value={settingsForm.name}
+                  onChange={(e) => setSettingsForm({ ...settingsForm, name: e.target.value })}
+                  onKeyDown={(e) => e.key === 'Enter' && handleSaveSettings()}
+                  autoFocus
+                />
+              </div>
+            </div>
+
+            <div className="field-group" style={{ marginBottom: '16px' }}>
+              <label>所属项目</label>
+              <div className="input-wrapper">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="m6 14 1.5-2.9A2 2 0 0 1 9.24 10H20a2 2 0 0 1 1.94 2.5l-1.54 6a2 2 0 0 1-1.95 1.5H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h3.9a2 2 0 0 1 1.69.9l.81 1.2a2 2 0 0 0 1.67.9H18a2 2 0 0 1 2 2v2"></path>
+                </svg>
+                <select
+                  className="config-input"
+                  value={settingsForm.projectId}
+                  onChange={(e) => setSettingsForm({ ...settingsForm, projectId: e.target.value })}
+                  style={{ cursor: 'pointer' }}
+                >
+                  <option value="">无（独立画布）</option>
+                  {projects.map((project) => (
+                    <option key={project.id} value={project.id}>
+                      {project.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div className="confirm-modal-actions">
+              <button className="confirm-modal-btn cancel" onClick={() => setShowSettings(false)}>
+                取消
+              </button>
+              <button
+                className="confirm-modal-btn confirm"
+                onClick={handleSaveSettings}
+                disabled={!settingsForm.name.trim() || saving}
+              >
+                {saving ? '保存中...' : '保存'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <Sidebar onAddNode={addNode} />
 
       <CanvasRenderer
