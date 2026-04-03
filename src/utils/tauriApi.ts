@@ -5,6 +5,7 @@ import type {
   LlmConfig,
   LlmProviderType,
   ComfyuiConfig,
+  ComfyuiWorkflow,
   ProjectInfo,
   SaveResult,
   ProjectInfoData,
@@ -20,6 +21,7 @@ export type {
   LlmConfig,
   LlmProviderType,
   ComfyuiConfig,
+  ComfyuiWorkflow,
   ProjectInfo,
   SaveResult,
   ProjectInfoData,
@@ -92,6 +94,21 @@ export async function saveComfyuiConfig(config: ComfyuiConfig): Promise<ComfyuiC
 // Delete a ComfyUI config
 export async function deleteComfyuiConfig(id: string): Promise<string> {
   return await invoke<string>('delete_comfyui_config', { id })
+}
+
+// Get all workflows for a ComfyUI config
+export async function getComfyuiWorkflows(comfyuiId: string): Promise<ComfyuiWorkflow[]> {
+  return await invoke<ComfyuiWorkflow[]>('get_comfyui_workflows', { comfyuiId })
+}
+
+// Save or update a ComfyUI workflow
+export async function saveComfyuiWorkflow(workflow: ComfyuiWorkflow): Promise<ComfyuiWorkflow> {
+  return await invoke<ComfyuiWorkflow>('save_comfyui_workflow', { workflow })
+}
+
+// Delete a ComfyUI workflow
+export async function deleteComfyuiWorkflow(id: string): Promise<string> {
+  return await invoke<string>('delete_comfyui_workflow', { id })
 }
 
 // Test LLM connection

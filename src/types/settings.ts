@@ -47,6 +47,13 @@ export interface ComfyuiConfig {
   port: string
 }
 
+export interface ComfyuiWorkflow {
+  id: string
+  comfyui_id: string
+  name: string
+  workflow_data: string
+}
+
 export interface TestConnectionResult {
   logs: string[]
   success: boolean

@@ -2,15 +2,21 @@ import { useState, useEffect } from 'react'
 import HeaderBar from '../components/HeaderBar'
 import TestLogModal from '../components/TestLogModal'
 import CustomSelect from '../components/CustomSelect'
+import { open } from '@tauri-apps/plugin-dialog'
+import { readTextFile } from '@tauri-apps/plugin-fs'
 import {
   LlmConfig,
   ComfyuiConfig,
+  ComfyuiWorkflow,
   getLlmConfigs,
   saveLlmConfig,
   deleteLlmConfig,
   getComfyuiConfigs,
   saveComfyuiConfig,
   deleteComfyuiConfig,
+  getComfyuiWorkflows,
+  saveComfyuiWorkflow,
+  deleteComfyuiWorkflow,
   testLlmConnection,
   testComfyuiConnection,
   getSkills,
@@ -58,6 +64,9 @@ export default function Settings() {
   const [editingId, setEditingId] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
 
+  // Workflows state (keyed by comfyui config id)
+  const [workflows, setWorkflows] = useState<Map<string, ComfyuiWorkflow[]>>(new Map())
+
   // Skill states
   const [skills, setSkills] = useState<SkillInfo[]>([])
   const [selectedSkillId, setSelectedSkillId] = useState<string | null>(null)
@@ -91,6 +100,18 @@ export default function Settings() {
       ])
       setLlmConfigs(llms.map(config => ({ ...config, connectionStatus: 'untested' as ConnectionStatus })))
       setComfyuiConfigs(comfyuis.map(config => ({ ...config, connectionStatus: 'untested' as ConnectionStatus })))
+
+      // Load workflows for all ComfyUI configs
+      const workflowsMap = new Map<string, ComfyuiWorkflow[]>()
+      for (const config of comfyuis) {
+        try {
+          const wfList = await getComfyuiWorkflows(config.id)
+          workflowsMap.set(config.id, wfList)
+        } catch {
+          workflowsMap.set(config.id, [])
+        }
+      }
+      setWorkflows(workflowsMap)
     } catch {
       notifyError('加载配置失败')
     } finally {
@@ -147,9 +168,65 @@ export default function Settings() {
     try {
       await saveComfyuiConfig(newConfig)
       setComfyuiConfigs([...comfyuiConfigs, newConfig])
+      setWorkflows(prev => new Map(prev).set(newConfig.id, []))
       setEditingId(newConfig.id)
     } catch {
       notifyError('添加 ComfyUI 配置失败')
+    }
+  }
+
+  const handleAddWorkflow = async (comfyuiId: string) => {
+    // Open file dialog to select a workflow JSON file
+    const selected = await open({
+      multiple: false,
+      filters: [{
+        name: 'Workflow JSON',
+        extensions: ['json']
+      }]
+    })
+
+    if (!selected) return
+
+    const filePath = selected as string
+    const fileName = filePath.split(/[/\\]/).pop()?.replace('.json', '') || '未命名'
+
+    try {
+      // Read the file content
+      const content = await readTextFile(filePath)
+
+      const newWorkflow: ComfyuiWorkflow = {
+        id: crypto.randomUUID(),
+        comfyui_id: comfyuiId,
+        name: fileName,
+        workflow_data: content,
+      }
+
+      await saveComfyuiWorkflow(newWorkflow)
+      setWorkflows(prev => {
+        const newMap = new Map(prev)
+        const existing = newMap.get(comfyuiId) || []
+        newMap.set(comfyuiId, [...existing, newWorkflow])
+        return newMap
+      })
+      notifySuccess('Workflow 上传成功')
+    } catch (error) {
+      console.error('Failed to read workflow file:', error)
+      notifyError('读取 Workflow 文件失败')
+    }
+  }
+
+  const handleDeleteWorkflow = async (comfyuiId: string, workflowId: string) => {
+    try {
+      await deleteComfyuiWorkflow(workflowId)
+      setWorkflows(prev => {
+        const newMap = new Map(prev)
+        const existing = newMap.get(comfyuiId) || []
+        newMap.set(comfyuiId, existing.filter(w => w.id !== workflowId))
+        return newMap
+      })
+      notifySuccess('Workflow 删除成功')
+    } catch {
+      notifyError('删除 Workflow 失败')
     }
   }
 
@@ -623,6 +700,41 @@ description: ${name}
                                 />
                               </div>
                             </div>
+                          </div>
+                        </div>
+
+                        {/* Workflows Section */}
+                        <div className="workflows-section">
+                          <div className="workflows-header">
+                            <span className="workflows-title">Workflows</span>
+                            <button
+                              className="settings-add-btn-small"
+                              onClick={() => handleAddWorkflow(config.id)}
+                              disabled={editingId !== config.id}
+                            >
+                              <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M5 12h14"></path>
+                                <path d="M12 5v14"></path>
+                              </svg>
+                              添加
+                            </button>
+                          </div>
+                          <div className="workflows-list">
+                            {(workflows.get(config.id) || []).map(workflow => (
+                              <div key={workflow.id} className="workflow-item">
+                                <span className="workflow-name">{workflow.name}</span>
+                                <button
+                                  className="delete-model-btn"
+                                  onClick={() => handleDeleteWorkflow(config.id, workflow.id)}
+                                  disabled={editingId !== config.id}
+                                >
+                                  <TrashIcon />
+                                </button>
+                              </div>
+                            ))}
+                            {(workflows.get(config.id) || []).length === 0 && (
+                              <div className="workflows-empty">暂无 Workflows</div>
+                            )}
                           </div>
                         </div>
                       </div>

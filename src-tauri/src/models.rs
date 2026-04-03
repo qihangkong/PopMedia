@@ -101,6 +101,15 @@ pub struct ComfyuiConfig {
     pub port: String,
 }
 
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct ComfyuiWorkflow {
+    pub id: String,
+    pub comfyui_id: String,
+    pub name: String,
+    /// Workflow JSON content or API endpoint
+    pub workflow_data: String,
+}
+
 #[derive(Debug, Serialize, Deserialize)]
 pub struct TestConnectionResult {
     pub logs: Vec<String>,

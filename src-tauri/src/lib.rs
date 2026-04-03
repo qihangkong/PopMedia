@@ -90,6 +90,9 @@ pub fn run() {
             commands::get_comfyui_configs,
             commands::save_comfyui_config,
             commands::delete_comfyui_config,
+            commands::get_comfyui_workflows,
+            commands::save_comfyui_workflow,
+            commands::delete_comfyui_workflow,
             // Connection tests
             commands::test_llm_connection,
             commands::test_comfyui_connection,
